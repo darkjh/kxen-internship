@@ -1,7 +1,17 @@
 package com.kxen.han.projection.fpg;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
-public class ProjectionTest extends TestCase {
-	
+
+@RunWith(JUnit4.class)
+public class ProjectionTest {
+
+	@Test
+	public void testProject() throws Exception {
+		OutputLayer ol = new OutputLayer();
+		Projection.project("src/test/resources/TestExampleAutoGen", 
+				ol, 3);
+	}
 }
