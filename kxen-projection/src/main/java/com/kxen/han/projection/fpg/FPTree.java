@@ -79,7 +79,7 @@ public class FPTree {
 	 */
 	public void firstScan() throws Exception {
 		L = Lists.newArrayList();
-		freq = Maps.newHashMap();
+		freq = Maps.newTreeMap();
 		
 		LongPrimitiveIterator itemIter = dataModel.getItemIDs();
 		while(itemIter.hasNext()) {
@@ -147,17 +147,12 @@ public class FPTree {
 	
 	public static void main(String[] args) throws Exception {
 		// String file = "./resources/tinyRecomm";
-		String file = "/home/port/datasets/msd-small/test_triples";
+		String file = "src/main/resources/test_triples";
 		// String file = "./resources/TestExampleAutoGen";
 		Runtime rt = Runtime.getRuntime();
 
-		long m1 = rt.freeMemory();
 		FPTree fpt = new FPTree(file, 2);
-		
 		rt.gc();
-		Thread.sleep(1000);
-		long m2 = rt.freeMemory();
-		
-		System.out.println(m2 - m1);
+		Thread.sleep(20000);
 	}
 }

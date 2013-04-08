@@ -14,7 +14,7 @@ import com.google.common.collect.Maps;
  *
  */
 public class FPTreeNode {
-	private final Long item;
+	private final long item;
 	private int count;
 	private boolean isRoot;
 
@@ -40,7 +40,7 @@ public class FPTreeNode {
 	/** add a node as a child, also add to header table */
 	public FPTreeNode addChild(Long childItem, List<FPTreeNode> headerList) { 
 		if (children == null) {
-			children = Maps.newHashMap();
+			children = Maps.newTreeMap();
 		}
 		
 		FPTreeNode child;
