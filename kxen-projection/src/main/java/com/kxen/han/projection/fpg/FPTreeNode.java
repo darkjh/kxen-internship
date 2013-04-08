@@ -3,6 +3,7 @@ package com.kxen.han.projection.fpg;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
@@ -19,8 +20,9 @@ public class FPTreeNode {
 	private boolean isRoot;
 
 	private FPTreeNode parent;
-	// TODO replace this with memory efficient structure
-	private Map<Long, FPTreeNode> children;
+	// TODO try out some diff. data structures
+	// private Map<Long, FPTreeNode> children;
+	private List<FPTreeNode> children;
 
 	/** ctor for normal node */
 	public FPTreeNode(long i, int c, FPTreeNode p) {
@@ -37,19 +39,31 @@ public class FPTreeNode {
 		isRoot = true;
 	}
 	
+	private FPTreeNode searchChild(Long childItem) {
+		for (FPTreeNode fpn : children) {
+			if (fpn.getItem() == childItem)
+				return fpn;
+		}
+		return null;
+	}
+	
 	/** add a node as a child, also add to header table */
 	public FPTreeNode addChild(Long childItem, List<FPTreeNode> headerList) { 
 		if (children == null) {
-			children = Maps.newTreeMap();
+			// children = Maps.newTreeMap();
+			children = Lists.newLinkedList();
 		}
 		
 		FPTreeNode child;
-		if (children.containsKey(childItem)) {
-			child = children.get(childItem);
+		// if (children.containsKey(childItem)) {
+		if ((child = searchChild(childItem)) != null) {
+			// child = children.get(childItem);
+			// child = children. 
 			child.incrementCount();
 		} else {
 			child = new FPTreeNode(childItem, 1, this);
-			children.put(childItem, child);
+			// children.put(childItem, child);
+			children.add(child);
 			headerList.add(child);
 		}
 		return child;

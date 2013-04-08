@@ -152,6 +152,8 @@ public class FPTree {
 		Runtime rt = Runtime.getRuntime();
 
 		FPTree fpt = new FPTree(file, 2);
+		System.out.println("finished");
+
 		rt.gc();
 		Thread.sleep(20000);
 	}
