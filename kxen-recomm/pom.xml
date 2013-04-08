@@ -8,9 +8,7 @@
     <version>0.0.1</version>
   </parent>
 
-  <groupId>com.kxen.han</groupId>
   <artifactId>kxen-recomm</artifactId>
-  <version>0.0.1</version>
   <packaging>jar</packaging>
 
   <name>Mahout Recommender Demo</name>
