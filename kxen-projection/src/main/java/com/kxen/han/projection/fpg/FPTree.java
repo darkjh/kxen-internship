@@ -12,10 +12,8 @@ import org.apache.mahout.cf.taste.model.DataModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 
 /**
@@ -34,8 +32,7 @@ public class FPTree {
 	private int supportThreshold;
 	
 	private FPTreeNode root;
-	Multimap<Long, FPTreeNode> headerTable;
-	private List<Long> L;
+	private Map<Long, FPTreeNode[]> headerTable;
 	private Map<Long, Integer> freq;
 	
 	private Ordering<Long> byDescFrequencyOrdering = new Ordering<Long>() {
@@ -53,11 +50,21 @@ public class FPTree {
 		this(new File(filepath), threshold);
 	}
 	
+	public FPTree(String filepath, boolean transpose, int threshold) throws Exception {
+		this(new File(filepath), transpose, threshold);
+	}
+	
 	public FPTree(File file, int threshold) throws Exception {
-		this(new GenericBooleanPrefDataModel( 
+		this(new GenericBooleanPrefDataModel(
 				GenericBooleanPrefDataModel.toDataMap(new FileDataModel(file))),
 				threshold);
-//		this(new FileDataModel(file), threshold);
+	}
+	
+	public FPTree(File file, boolean transpose, int threshold) throws Exception {
+		this(new GenericBooleanPrefDataModel(
+				GenericBooleanPrefDataModel.toDataMap(
+						new FileDataModel(file, transpose, Long.MAX_VALUE))),
+				threshold);
 	}
 	
 	public FPTree(DataModel model, int threshold) throws Exception {
@@ -65,28 +72,23 @@ public class FPTree {
 		supportThreshold = threshold;
 		
 		root = new FPTreeNode();
-		headerTable = LinkedListMultimap.create();
+		headerTable = Maps.newTreeMap(byDescFrequencyOrdering);
 		
 		firstScan();
 		constructTree();
 		clean();
 	}
 	
-	public Multimap<Long, FPTreeNode> getHeaderTable() {
+	public Map<Long, FPTreeNode[]> getHeaderTable() {
 		return headerTable;
 	}
-	
-	public List<Long> getL() {
-		return L;
-	}
-	
+
 	/** 
 	 * First pass of data, construct L, a list of frequent item
 	 * in descending order of their frequency
 	 */
 	public void firstScan() throws Exception {
-		L = Lists.newArrayList();
-		freq = Maps.newTreeMap();
+		freq = Maps.newHashMap();
 		
 		LongPrimitiveIterator itemIter = dataModel.getItemIDs();
 		while(itemIter.hasNext()) {
@@ -94,13 +96,10 @@ public class FPTree {
 			int count = dataModel.getNumUsersWithPreferenceFor(itemID);
 			
 			if (count >= supportThreshold) {
-				L.add(itemID);
 				freq.put(itemID, count);
+				headerTable.put(itemID, new FPTreeNode[]{null, null});				
 			}
 		}
-		
-		// sort in descending order of frequency
-		Collections.sort(L, byDescFrequencyOrdering);
 	}
 	
 	/**
@@ -127,7 +126,6 @@ public class FPTree {
 			}
 			// sort its items in descending frequency order
 			Collections.sort(sortedItems, byDescFrequencyOrdering);
-			
 			insertTree(sortedItems, root);
 		}
 	}
@@ -142,7 +140,7 @@ public class FPTree {
 	private void insertTree(List<Long> sorted, FPTreeNode curr) {
 		if (!sorted.isEmpty()) {
 			Long item = sorted.get(0);
-			List<FPTreeNode> headerList = (List<FPTreeNode>) headerTable.get(item);
+			FPTreeNode[] headerList = headerTable.get(item);
 			FPTreeNode next = curr.addChild(item, headerList);
 			insertTree(sorted.subList(1, sorted.size()), next);
 		}
@@ -150,18 +148,17 @@ public class FPTree {
 	
 	/** help GC, these are big */
 	private void clean() {
-		L = null;
-		freq = null;
+		// freq = null;
 		dataModel = null;
 	}
 	
 	public static void main(String[] args) throws Exception {
-		// String file = "./resources/tinyRecomm";
-		String file = "src/main/resources/test_triples";
+		String file = "/home/port/datasets/msd-small/test_triples";
+		// String file = "src/main/resources/test_triples";
 		// String file = "./resources/TestExampleAutoGen";
 		Runtime rt = Runtime.getRuntime();
 
-		FPTree fpt = new FPTree(file, 2);
+		FPTree fpt = new FPTree(file, true, 2);
 		System.out.println("finished");
 
 		rt.gc();

@@ -19,7 +19,7 @@ public class FPTreeNode {
 	private boolean isRoot;
 
 	private FPTreeNode parent;
-	// TODO try out some diff. data structures
+	private FPTreeNode next;
 	private Map<Long, FPTreeNode> children;
 
 	/** ctor for normal node */
@@ -55,6 +55,32 @@ public class FPTreeNode {
 		return child;
 	}
 	
+	/** add a node as a child, also add to header table */
+	public FPTreeNode addChild(Long childItem, FPTreeNode[] headerList) { 
+		if (children == null) {
+			children = Maps.newTreeMap();
+		}
+		
+		FPTreeNode child;
+		if (children.containsKey(childItem)) {
+			child = children.get(childItem);
+			child.incrementCount();
+		} else {
+			child = new FPTreeNode(childItem, 1, this);
+			children.put(childItem, child);
+			
+			if (headerList[0] == null) {
+				// first occurrence of this item
+				headerList[0] = child;
+				headerList[1] = child;
+			} else {
+				headerList[1].setNext(child);
+				headerList[1] = child; 
+			}
+		}
+		return child;
+	}
+	
 	public boolean isRoot() {
 		return isRoot;
 	}
@@ -73,6 +99,14 @@ public class FPTreeNode {
 	
 	public int incrementCount() {
 		return ++count;
+	}
+	
+	public FPTreeNode getNext() {
+		return next;
+	}
+
+	public void setNext(FPTreeNode next) {
+		this.next = next;
 	}
 	
 	@Override

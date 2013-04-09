@@ -1,12 +1,16 @@
 package com.kxen.han.projection.fpg;
 
+import java.io.File;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.mahout.cf.taste.impl.model.GenericBooleanPrefDataModel;
+import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
+import org.apache.mahout.cf.taste.model.DataModel;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 
 /**
  * Bipartite graph projection solution using a FP-Tree approach
@@ -21,18 +25,35 @@ import com.google.common.collect.Multimap;
 public class Projection {
 	private static final String SEP = "\t";
 	
-	public static void project(String filepath, OutputLayer ol, 
+	public static void project (String file, boolean transpose, 
+			OutputLayer ol, int minSupport) throws Exception {
+		DataModel model = new GenericBooleanPrefDataModel( 
+				GenericBooleanPrefDataModel.toDataMap(
+						new FileDataModel(new File(file), transpose, Long.MAX_VALUE)));
+		project(model, ol, minSupport);
+	}
+	
+	public static void project(String file, OutputLayer ol, 
 			int minSupport) throws Exception {
-		FPTree fpt = new FPTree(filepath, minSupport);
-		Multimap<Long, FPTreeNode> headerTable = fpt.getHeaderTable();
+		DataModel model = new GenericBooleanPrefDataModel( 
+				GenericBooleanPrefDataModel.toDataMap(
+						new FileDataModel(new File(file))));
+		project(model, ol, minSupport);
+	}
+	
+	public static void project(DataModel model, OutputLayer ol, 
+			int minSupport) throws Exception {
+		FPTree fpt = new FPTree(model, minSupport);
+		Map<Long, FPTreeNode[]> headerTable = fpt.getHeaderTable();
 		
 		for (Long item : headerTable.keySet()) {
 			HashMap<Long, Integer> counter = Maps.newHashMap();
-			List<FPTreeNode> list = (List<FPTreeNode>) headerTable.get(item);
+			FPTreeNode list = headerTable.get(item)[0];
 			
 			// visit all conditional path of the current item
 			// merge them by counting
-			for (FPTreeNode node : list) {
+			FPTreeNode node = list;
+			while (node != null) {
 				int condSupport = node.getCount();
 				FPTreeNode curr = node.getParent();
 				while (!curr.isRoot()) {
@@ -41,6 +62,7 @@ public class Projection {
 					counter.put(currItem, count + condSupport);
 					curr = curr.getParent();
 				}
+				node = node.getNext();
 			}
 			
 			// generate pairs
