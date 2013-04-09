@@ -6,8 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.mahout.cf.taste.impl.common.LongPrimitiveIterator;
+import org.apache.mahout.cf.taste.impl.model.GenericBooleanPrefDataModel;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.model.DataModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
@@ -24,6 +27,8 @@ import com.google.common.collect.Ordering;
  *
  */
 public class FPTree {
+	
+	private static final Logger log = LoggerFactory.getLogger(FPTree.class);
 	
 	private DataModel dataModel;
 	private int supportThreshold;
@@ -49,7 +54,10 @@ public class FPTree {
 	}
 	
 	public FPTree(File file, int threshold) throws Exception {
-		this(new FileDataModel(file), threshold);
+		this(new GenericBooleanPrefDataModel( 
+				GenericBooleanPrefDataModel.toDataMap(new FileDataModel(file))),
+				threshold);
+//		this(new FileDataModel(file), threshold);
 	}
 	
 	public FPTree(DataModel model, int threshold) throws Exception {
@@ -75,7 +83,6 @@ public class FPTree {
 	/** 
 	 * First pass of data, construct L, a list of frequent item
 	 * in descending order of their frequency
-	 * TODO consider a priority queue
 	 */
 	public void firstScan() throws Exception {
 		L = Lists.newArrayList();
@@ -104,9 +111,12 @@ public class FPTree {
 	 */
 	private void constructTree() throws Exception {
 		LongPrimitiveIterator transIter = dataModel.getUserIDs();
+		long count = 0;
 		
 		// for every transaction
 		while (transIter.hasNext()) {
+			if (++count % 5000 == 0)
+				log.info("Processed {} transactions ...", count);
 			Long transID = transIter.next();
 			List<Long> sortedItems = Lists.newArrayList();
 			// filtered out infrequent item

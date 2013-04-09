@@ -59,11 +59,6 @@ public class Projection {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		// String file = "./resources/tinyRecomm";
-		// String file = "/home/port/datasets/msd-small/test_triples";
-		// String file = "/home/port/datasets/ml-10M/triples";
-		// String file = "./resources/TestExampleAutoGen";
-
 		Stopwatch sw = new Stopwatch();	
 		sw.start();
 		Projection.project(args[0], new OutputLayer(args[1]), 
