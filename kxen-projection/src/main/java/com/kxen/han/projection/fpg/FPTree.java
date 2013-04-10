@@ -38,6 +38,7 @@ public class FPTree {
 	private Ordering<Long> byDescFrequencyOrdering = new Ordering<Long>() {
 		// reversed order! 
 		// Array.sort() returns descending ordering
+		// TODO bug??
 		@Override
 		public int compare(Long left, Long right) {
 			int freqComp = freq.get(right) - freq.get(left);
@@ -72,7 +73,7 @@ public class FPTree {
 		supportThreshold = threshold;
 		
 		root = new FPTreeNode();
-		headerTable = Maps.newTreeMap(byDescFrequencyOrdering);
+		headerTable = Maps.newHashMap();
 		
 		firstScan();
 		constructTree();
@@ -148,17 +149,17 @@ public class FPTree {
 	
 	/** help GC, these are big */
 	private void clean() {
-		// freq = null;
+		freq = null;
 		dataModel = null;
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String file = "/home/port/datasets/msd-small/test_triples";
-		// String file = "src/main/resources/test_triples";
+		// String file = "/home/port/datasets/msd-small/test_triples";
+		String file = "src/main/resources/test_triples";
 		// String file = "./resources/TestExampleAutoGen";
 		Runtime rt = Runtime.getRuntime();
 
-		FPTree fpt = new FPTree(file, true, 2);
+		FPTree fpt = new FPTree(file, 2);
 		System.out.println("finished");
 
 		rt.gc();

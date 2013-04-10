@@ -16,7 +16,6 @@ import com.google.common.collect.Maps;
 public class FPTreeNode {
 	private final Long item;
 	private int count;
-	private boolean isRoot;
 
 	private FPTreeNode parent;
 	private FPTreeNode next;
@@ -24,7 +23,6 @@ public class FPTreeNode {
 
 	/** ctor for normal node */
 	public FPTreeNode(long i, int c, FPTreeNode p) {
-		isRoot = false;
 		item = i;
 		count = c;
 		parent = p;
@@ -34,7 +32,6 @@ public class FPTreeNode {
 	public FPTreeNode() {
 		item = -1L;
 		count = -1;
-		isRoot = true;
 	}
 	
 	/** add a node as a child, also add to header table */
@@ -82,7 +79,7 @@ public class FPTreeNode {
 	}
 	
 	public boolean isRoot() {
-		return isRoot;
+		return item == -1;
 	}
 	
 	public FPTreeNode getParent() {
