@@ -129,6 +129,8 @@ public class FPTree {
 			Collections.sort(sortedItems, byDescFrequencyOrdering);
 			insertTree(sortedItems, root);
 		}
+		log.info("Finished constructing FP-Tree ...");
+		log.info("Created {} tree nodes ...", FPTreeNode.nodeCount);
 	}
 	
 	/**
@@ -160,7 +162,6 @@ public class FPTree {
 		Runtime rt = Runtime.getRuntime();
 
 		FPTree fpt = new FPTree(file, 2);
-		System.out.println("finished");
 
 		rt.gc();
 		Thread.sleep(20000);

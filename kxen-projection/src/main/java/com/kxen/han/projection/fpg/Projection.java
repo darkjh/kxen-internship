@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.mahout.cf.taste.impl.model.GenericBooleanPrefDataModel;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.model.DataModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
@@ -23,9 +25,10 @@ import com.google.common.collect.Maps;
  *
  */
 public class Projection {
+	private static final Logger log = LoggerFactory.getLogger(Projection.class);
 	private static final String SEP = "\t";
 	
-	public static void project (String file, boolean transpose, 
+	public static void project(String file, boolean transpose, 
 			OutputLayer ol, int minSupport) throws Exception {
 		DataModel model = new GenericBooleanPrefDataModel( 
 				GenericBooleanPrefDataModel.toDataMap(
@@ -45,8 +48,11 @@ public class Projection {
 			int minSupport) throws Exception {
 		FPTree fpt = new FPTree(model, minSupport);
 		Map<Long, FPTreeNode[]> headerTable = fpt.getHeaderTable();
+		long cc = 0;
 		
 		for (Long item : headerTable.keySet()) {
+			if (++cc % 2500 == 0)
+				log.info("Projected for {} items/users ...", cc);
 			HashMap<Long, Integer> counter = Maps.newHashMap();
 			FPTreeNode list = headerTable.get(item)[0];
 			
@@ -78,6 +84,7 @@ public class Projection {
 			}
 		}
 		ol.close();
+		log.info("Projection finished ...");
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -87,6 +94,7 @@ public class Projection {
 				Integer.parseInt(args[2]));
 		sw.stop();
 		
-		System.out.println(sw.elapsed(TimeUnit.MILLISECONDS));
+		log.info("Projection process finished, used {} ms ...", 
+				sw.elapsed(TimeUnit.MILLISECONDS));
 	}
 }

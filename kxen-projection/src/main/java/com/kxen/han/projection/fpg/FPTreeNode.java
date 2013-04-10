@@ -14,6 +14,9 @@ import com.google.common.collect.Maps;
  *
  */
 public class FPTreeNode {
+	// keep track of #node created
+	public static long nodeCount;
+	
 	private final Long item;
 	private int count;
 
@@ -65,6 +68,7 @@ public class FPTreeNode {
 		} else {
 			child = new FPTreeNode(childItem, 1, this);
 			children.put(childItem, child);
+			nodeCount++;
 			
 			if (headerList[0] == null) {
 				// first occurrence of this item
