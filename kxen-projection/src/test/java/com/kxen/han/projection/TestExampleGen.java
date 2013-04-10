@@ -29,7 +29,7 @@ public class TestExampleGen {
 	
 	public static void generateFromTransacFile(File file) throws Exception {
 		Scanner scanner = new Scanner(file);
-		FileWriter fstream = new FileWriter("./resources/TestExampleAutoGen");
+		FileWriter fstream = new FileWriter("src/test/resources/TestExampleAutoGen");
 		BufferedWriter out = new BufferedWriter(fstream);
 		while (scanner.hasNextLine()) {
 			String[] line = scanner.nextLine().split("\t");
