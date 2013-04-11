@@ -44,6 +44,6 @@ public class TestExampleGen {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		generateFromTransacFile(new File("./resources/tinyPaperTransac"));
+		generateFromTransacFile(new File("src/test/resources/tinyPaperTransac"));
 	}
 }
