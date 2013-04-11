@@ -73,7 +73,7 @@ public class Projection {
 
 	private int insertTransac(FPTree tree, List<Long> transac, long minSupport) {
 
-		int temp = FPTree.ROOTNODEID;
+		int temp = FPTree.ROOT_NODE_ID;
 		int ret = 0;
 		boolean addCountMode = true;
 
@@ -86,12 +86,12 @@ public class Projection {
 				if (child == -1) {
 					addCountMode = false;
 				} else {
-					tree.addCount(child, 1L);
+					tree.addCount(child, 1);
 					temp = child;
 				}
 			}
 			if (!addCountMode) {
-				child = tree.createNode(temp, attribute, 1L);
+				child = tree.createNode(temp, attribute, 1);
 				temp = child;
 				ret++;
 			}
@@ -157,7 +157,7 @@ public class Projection {
  				long condSupport = fpt.count(nextNode);
  				// go upward
  				int curr = fpt.parent(nextNode);
- 				while (curr != fpt.ROOTNODEID) {
+ 				while (curr != fpt.ROOT_NODE_ID) {
  					int currItem = fpt.attribute(curr);
  					long count = counter.containsKey(currItem) ? counter
  							.get(currItem) : 0;
