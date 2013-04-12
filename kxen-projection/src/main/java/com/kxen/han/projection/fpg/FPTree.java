@@ -32,7 +32,7 @@ public class FPTree {
 	private int supportThreshold;
 	
 	private FPTreeNode root;
-	private Map<Long, FPTreeNode[]> headerTable;
+	private Map<Integer, FPTreeNode[]> headerTable;
 	private Map<Long, Integer> freq;
 	
 	private Ordering<Long> byDescFrequencyOrdering = new Ordering<Long>() {
@@ -80,7 +80,7 @@ public class FPTree {
 		clean();
 	}
 	
-	public Map<Long, FPTreeNode[]> getHeaderTable() {
+	public Map<Integer, FPTreeNode[]> getHeaderTable() {
 		return headerTable;
 	}
 
@@ -98,7 +98,7 @@ public class FPTree {
 			
 			if (count >= supportThreshold) {
 				freq.put(itemID, count);
-				headerTable.put(itemID, new FPTreeNode[]{null, null});				
+				headerTable.put((int) itemID, new FPTreeNode[]{null, null});				
 			}
 		}
 	}
@@ -142,7 +142,7 @@ public class FPTree {
 	 */
 	private void insertTree(List<Long> sorted, FPTreeNode curr) {
 		if (!sorted.isEmpty()) {
-			Long item = sorted.get(0);
+			Integer item = sorted.get(0).intValue();
 			FPTreeNode[] headerList = headerTable.get(item);
 			FPTreeNode next = curr.addChild(item, headerList);
 			insertTree(sorted.subList(1, sorted.size()), next);

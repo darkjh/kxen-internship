@@ -47,13 +47,13 @@ public class Projection {
 	public static void project(DataModel model, OutputLayer ol, 
 			int minSupport) throws Exception {
 		FPTree fpt = new FPTree(model, minSupport);
-		Map<Long, FPTreeNode[]> headerTable = fpt.getHeaderTable();
+		Map<Integer, FPTreeNode[]> headerTable = fpt.getHeaderTable();
 		long cc = 0;
 		
-		for (Long item : headerTable.keySet()) {
+		for (Integer item : headerTable.keySet()) {
 			if (++cc % 2500 == 0)
 				log.info("Projected for {} items/users ...", cc);
-			HashMap<Long, Integer> counter = Maps.newHashMap();
+			HashMap<Integer, Integer> counter = Maps.newHashMap();
 			FPTreeNode list = headerTable.get(item)[0];
 			
 			// visit all conditional path of the current item
@@ -63,7 +63,7 @@ public class Projection {
 				int condSupport = node.getCount();
 				FPTreeNode curr = node.getParent();
 				while (!curr.isRoot()) {
-					Long currItem = curr.getItem();
+					Integer currItem = curr.getItem();
 					int count = counter.containsKey(currItem) ? counter.get(currItem) : 0;
 					counter.put(currItem, count + condSupport);
 					curr = curr.getParent();
@@ -72,7 +72,7 @@ public class Projection {
 			}
 			
 			// generate pairs
-			for (Long i : counter.keySet()) {
+			for (Integer i : counter.keySet()) {
 				int pairSupport = counter.get(i);
 				if (pairSupport >= minSupport) {
 					String out = item < i ? 

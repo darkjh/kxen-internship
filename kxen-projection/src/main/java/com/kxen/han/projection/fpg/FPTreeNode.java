@@ -17,46 +17,28 @@ public class FPTreeNode {
 	// keep track of #node created
 	public static long nodeCount;
 	
-	private final Long item;
+	private final Integer item;
 	private int count;
 
 	private FPTreeNode parent;
 	private FPTreeNode next;
-	private Map<Long, FPTreeNode> children;
+	private Map<Integer, FPTreeNode> children;
 
 	/** ctor for normal node */
 	public FPTreeNode(long i, int c, FPTreeNode p) {
-		item = i;
+		item = (int) i;
 		count = c;
 		parent = p;
 	}
 
 	/** ctor for a root node */
 	public FPTreeNode() {
-		item = -1L;
+		item = -1;
 		count = -1;
 	}
-	
+
 	/** add a node as a child, also add to header table */
-	public FPTreeNode addChild(Long childItem, List<FPTreeNode> headerList) { 
-		if (children == null) {
-			children = Maps.newTreeMap();
-		}
-		
-		FPTreeNode child;
-		if (children.containsKey(childItem)) {
-			child = children.get(childItem);
-			child.incrementCount();
-		} else {
-			child = new FPTreeNode(childItem, 1, this);
-			children.put(childItem, child);
-			headerList.add(child);
-		}
-		return child;
-	}
-	
-	/** add a node as a child, also add to header table */
-	public FPTreeNode addChild(Long childItem, FPTreeNode[] headerList) { 
+	public FPTreeNode addChild(Integer childItem, FPTreeNode[] headerList) { 
 		if (children == null) {
 			children = Maps.newTreeMap();
 		}
@@ -90,7 +72,7 @@ public class FPTreeNode {
 		return parent;
 	}
 
-	public Long getItem() {
+	public Integer getItem() {
 		return item;
 	}
 
