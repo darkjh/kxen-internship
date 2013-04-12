@@ -71,34 +71,6 @@ public class Projection {
 		}
 	}
 
-	private int insertTransac(FPTree tree, List<Long> transac, long minSupport) {
-
-		int temp = FPTree.ROOT_NODE_ID;
-		int ret = 0;
-		boolean addCountMode = true;
-
-		for (long item : transac) {
-			int child;
-			int attribute = (int) item;
-
-			if (addCountMode) {
-				child = tree.childWithAttribute(temp, attribute);
-				if (child == -1) {
-					addCountMode = false;
-				} else {
-					tree.addCount(child, 1);
-					temp = child;
-				}
-			}
-			if (!addCountMode) {
-				child = tree.createNode(temp, attribute, 1);
-				temp = child;
-				ret++;
-			}
-		}
-		return ret;
-	}
-
 	private void constructTree() throws Exception {
 		fpt = new FPTree(freq.size());
 
@@ -122,27 +94,29 @@ public class Projection {
 			Collections.sort(sortedItems, byDescFrequencyOrdering);
 			
 			// insert into tree
-			nodeCount += insertTransac(fpt, sortedItems, minSupport);
+			nodeCount += fpt.insertTransac(sortedItems);
 		}
 		log.info("Created {} nodes in FP-tree ...", nodeCount);
 	}
-
+	
+	/* help gc, these are big */
 	private void clean() {
 		freq = null;
 		dataModel = null;
+		fpt.clean();
 	}
 
 	public void project(OutputLayer ol) throws Exception {
 		// construct FP-tree
 		firstScan();
 		constructTree();
-		clean();
+		clean(); // Runtime.getRuntime().gc(); Thread.sleep(15000);
 		
 		// projection
 		long cc = 0;
 
 		int headerTableCount = fpt.getHeaderTableCount();
-		int[] headerTableItems = fpt.getHeaderTableAttributes();
+		int[] headerTableItems = fpt.getHeaderTableItems();
 		
 		// for each frequent item
  		for (int i = 0; i < headerTableCount; i++) {
@@ -156,15 +130,15 @@ public class Projection {
  			while (nextNode > 0) {
  				long condSupport = fpt.count(nextNode);
  				// go upward
- 				int curr = fpt.parent(nextNode);
- 				while (curr != fpt.ROOT_NODE_ID) {
- 					int currItem = fpt.attribute(curr);
+ 				int curr = fpt.getParent(nextNode);
+ 				while (!fpt.isRoot(curr)) {
+ 					int currItem = fpt.getItem(curr);
  					long count = counter.containsKey(currItem) ? counter
  							.get(currItem) : 0;
  					counter.put(currItem, count + condSupport);
- 					curr = fpt.parent(curr);
+ 					curr = fpt.getParent(curr);
  				}
- 				nextNode = fpt.next(nextNode);
+ 				nextNode = fpt.getNext(nextNode);
  			}
  			
 			// generate pairs
