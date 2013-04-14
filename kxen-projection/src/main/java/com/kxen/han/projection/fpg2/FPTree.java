@@ -18,27 +18,31 @@ public class FPTree {
 	private static final int HEADER_TABLE_INITIAL_SIZE = 4;
 	private static final int INITIAL_SIZE = 8;
 	private static final float GROWTH_RATE = 1.5f;
-	private static final int HEADERTABLEBLOCKSIZE = 2;
+	private static final int HEADER_TABLE_BLOCK_SIZE = 2;
 	private static final int HT_LAST = 1;
 	private static final int HT_NEXT = 0;
 	
-	private int[] items;					/* items */
-	private int[] childCount;				/* #children for each node */
-	private long[] headerTableItemCount;	/* #item nodes in the tree */
-	private int[] headerTableItems;			/* frequent items */
+	private int[] items;					/* node id -> item id */
+	private int[] childCount;				/* node id -> #children for that node */
+	private long[] headerTableItemCount;	/* ht index -> #item nodes in tree */
+	private int[] headerTableItems;			/* ht index -> item id */
 	private int headerTableCount;			/* #frequent items */
-	private int[] headerTableLookup;
-	private int[][] headerTable;
-	private int[] next;
-	private int[][] nodeChildren;
+	private int[] headerTableLookup;		/* item id -> ht index */
+	private int[][] headerTable;			/* ht index ->  [same item links] */
+	private int[] next;						/* node id -> node id of next same item in tree */
+	private int[][] nodeChildren;			/* node id -> [children node ids] */
 	private int[] nodeCount;				/* count of support of each node */
-	private int nodeID;						/* next node's internal index */
-	private int[] parent;
+	private int nodeID;						/* next node's node id */
+	private int[] parent;					/* node id -> parent node id */
 
 	public FPTree() {
 		this(INITIAL_SIZE);
 	}
-
+	
+	/** 
+	 * Init the tree structre with a given size
+	 * @param size
+	 */
 	public FPTree(int size) {
 		if (size < INITIAL_SIZE) {
 			size = INITIAL_SIZE;
@@ -111,7 +115,7 @@ public class FPTree {
 	}
 	
 	/** linear search for a child item */
-	public final int childWithAttribute(int nodeId, int childItem) {
+	public final int childWithItem(int nodeId, int childItem) {
 		int length = childCount[nodeId];
 		for (int i = 0; i < length; i++) {
 			if (items[nodeChildren[nodeId][i]] == childItem) {
@@ -131,29 +135,22 @@ public class FPTree {
 	public final long count(int nodeId) {
 		return nodeCount[nodeId];
 	}
-
+	
+	/** insert a transaction into the tree */
 	public int insertTransac(List<Long> transac) {
-		int temp = getRoot();
+		int curr = getRoot();
 		int nodeCreated = 0;
-		boolean addCountMode = true;
 
 		for (long longItem : transac) {
-			int child;
 			int item = (int) longItem;
-
-			if (addCountMode) {
-				child = childWithAttribute(temp, item);
-				if (child == -1) {
-					addCountMode = false;
-				} else {
-					addCount(child, 1);
-					temp = child;
-				}
-			}
-			if (!addCountMode) {
-				child = createNode(temp, item);
-				temp = child;
+			int child = childWithItem(curr, item);
+			if (child == -1) {
+				child = createNode(curr, item);
+				curr = child;
 				nodeCreated++;
+			} else {
+				addCount(child, 1);
+				curr = child;
 			}
 		}
 		return nodeCreated;
@@ -267,7 +264,7 @@ public class FPTree {
 			}
 			headerTableItems[headerTableCount] = item;
 			if (headerTable[headerTableCount] == null) {
-				headerTable[headerTableCount] = new int[HEADERTABLEBLOCKSIZE];
+				headerTable[headerTableCount] = new int[HEADER_TABLE_BLOCK_SIZE];
 			}
 			headerTableItemCount[headerTableCount] = 0;
 			headerTable[headerTableCount][HT_NEXT] = -1;
