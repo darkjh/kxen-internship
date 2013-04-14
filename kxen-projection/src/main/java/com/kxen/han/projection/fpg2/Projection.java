@@ -20,7 +20,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.kxen.han.projection.fpg.OutputLayer;
 
-// TODO repeated code !!!!!!!!!!!!!!!!!!!!!
 /**
  * 
  * @author Han JU
@@ -37,7 +36,7 @@ public class Projection {
 	private FPTree fpt;
 	private Map<Long, Integer> freq;
 	
-	private int numThreads = 8;
+	private int numThreads = 1;			/* single thread by default */
 	
 	int headerTableCount;
 	int[] headerTableItems;
@@ -45,12 +44,11 @@ public class Projection {
 	private Ordering<Long> byDescFrequencyOrdering = new Ordering<Long>() {
 		// reversed order!
 		// Array.sort() returns descending ordering
-		// TODO bug??
 		@Override
 		public int compare(Long left, Long right) {
 			int freqComp = freq.get(right) - freq.get(left);
 			// fixed order !!!
-			return freqComp != 0 ? freqComp : (int) (right - left);
+			return freqComp != 0 ? freqComp :  right.compareTo(left);
 		}
 	};
 
@@ -117,23 +115,29 @@ public class Projection {
 		dataModel = null;
 		fpt.clean();
 	}
-
+	
+	/**
+	 * Threaded projection implementation
+	 * Each thread is in charge of the item at (index % threads) + threadNum
+	 * of the FP-Tree header table
+	 * Each thread output into its own file
+	 */
 	class ProjectRunnable implements Runnable {
-		private int threadNum;
-		private int itemIndex;
-		OutputLayer ol;
+		private int threadNum;		/* id for each thread */
+		private int itemIndex;		/* header table index of item in charge of the thread */
+		private OutputLayer ol;
 
 		public ProjectRunnable(int num, String outputBase) throws Exception {
 			threadNum = num;
 			itemIndex = threadNum;
-			ol = new OutputLayer(outputBase + Integer.toString(threadNum));
+			ol = new OutputLayer(outputBase+"@"+Integer.toString(threadNum));
 		}
 
 		@Override
 		public void run() {
 			long cc = 0;
 			while (itemIndex < headerTableCount) {
-				if (++cc % 500 == 0)
+				if (++cc % 1000 == 0)
 					log.info("Thread"+Integer.toString(threadNum)+": Projected for {} items/users ...", cc);
 
 				HashMap<Integer, Long> counter = Maps.newHashMap();
@@ -170,16 +174,23 @@ public class Projection {
 			ol.close();
 		}
 	}
-
-	public void multiThreadProject(String outputBase) throws Exception {
+	
+	/**
+	 * Run multi-threading projection
+	 * 
+	 * @param outputBase output path and base file name
+	 */
+	public void project(String outputBase) throws Exception {
 		// construct FP-tree
 		firstScan();
 		constructTree();
-		clean();
+		clean();	// Runtime.getRuntime().gc(); Thread.sleep(15000);
 		
+		// get shared header table info.
 		headerTableCount = fpt.getHeaderTableCount();
 		headerTableItems = fpt.getHeaderTableItems();
 		
+		// launch threads
 		List<Thread> threads = Lists.newArrayList();
 		for (int i = 0; i < numThreads; i++) {
 			Runnable task = new ProjectRunnable(i, outputBase);
@@ -202,61 +213,18 @@ public class Projection {
 		log.info("Projection finished ...");
 	}
 
-	public void project(OutputLayer ol) throws Exception {
-		// construct FP-tree
-		firstScan();
-		constructTree();
-		clean(); // Runtime.getRuntime().gc(); Thread.sleep(15000);
-
-		// projection
-		long cc = 0;
-
-		headerTableCount = fpt.getHeaderTableCount();
-		headerTableItems = fpt.getHeaderTableItems();
-
-		// for each frequent item
-		for (int i = 0; i < headerTableCount; i++) {
-			if (++cc % 5000 == 0)
-				log.info("Projected for {} items/users ...", cc);
-
-			HashMap<Integer, Long> counter = Maps.newHashMap();
-			int item = headerTableItems[i];
-			int nextNode = fpt.getHeaderNext(item);
-			// chase for same item
-			while (nextNode > 0) {
-				long condSupport = fpt.count(nextNode);
-				// go upward
-				int curr = fpt.getParent(nextNode);
-				while (!fpt.isRoot(curr)) {
-					int currItem = fpt.getItem(curr);
-					long count = counter.containsKey(currItem) ? counter
-							.get(currItem) : 0;
-					counter.put(currItem, count + condSupport);
-					curr = fpt.getParent(curr);
-				}
-				nextNode = fpt.getNext(nextNode);
-			}
-
-			// generate pairs
-			for (Integer other : counter.keySet()) {
-				long pairSupport = counter.get(other);
-				if (pairSupport >= minSupport) {
-					String out = item < other ? Integer.toString(item) + SEP
-							+ other.toString() : other.toString() + SEP
-							+ Integer.toString(item);
-					out = out + SEP + Long.toString(pairSupport);
-					ol.writeLine(out);
-				}
-			}
-		}
-		ol.close();
-		log.info("Projection finished ...");
-	}
-
+	/**
+	 * Simple projection client
+	 * 
+	 * @param args input output minSupport numThreads
+	 * @throws Exception
+	 */
 	public static void main(String[] args) throws Exception {
 		boolean thread = false;
 		if (args.length > 3)
 			thread = true;
+		
+		log.info("Have {} available processors ...", Runtime.getRuntime().availableProcessors());
 		
 		Stopwatch sw = new Stopwatch();
 		sw.start();
@@ -267,10 +235,10 @@ public class Projection {
 		Projection proj;
 		if (thread) {
 			proj = new Projection(dataModel, Integer.parseInt(args[2]), Integer.parseInt(args[3]));
-			proj.multiThreadProject(args[1]);
-		} else {
+			proj.project(args[1]);
+		} else {	// by default, single thread
 			proj = new Projection(dataModel, Integer.parseInt(args[2]));
-			proj.project(new OutputLayer(new File(args[1])));
+			proj.project(args[1]);
 		}
 		sw.stop();
 
