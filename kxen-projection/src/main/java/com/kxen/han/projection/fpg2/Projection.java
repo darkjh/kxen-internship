@@ -130,7 +130,7 @@ public class Projection {
 		public ProjectRunnable(int num, String outputBase) throws Exception {
 			threadNum = num;
 			itemIndex = threadNum;
-			ol = new OutputLayer(outputBase+"@"+Integer.toString(threadNum));
+			ol = OutputLayer.newInstance(outputBase+"@"+Integer.toString(threadNum));
 		}
 
 		@Override

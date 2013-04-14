@@ -8,18 +8,29 @@ import java.io.PrintWriter;
 public class OutputLayer {
 	private PrintWriter pw;
 	
+	/* static factory */
+	public static OutputLayer newInstance() {
+		return new OutputLayer();
+	}
+	
+	/* static factory */
+	public static OutputLayer newInstance(String filepath) 
+			throws Exception {
+		return new OutputLayer(filepath); 
+	}
+	
 	/** ctor for console output */
-	public OutputLayer() {
+	private OutputLayer() {
 		pw = new PrintWriter(System.out);
 	}
 	
 	/** ctor for file output */
-	public OutputLayer(String filepath) throws Exception {
+	private OutputLayer(String filepath) throws Exception {
 		this(new File(filepath));
 	}
 	
 	/** ctor for file output */
-	public OutputLayer(File file) throws Exception {
+	private OutputLayer(File file) throws Exception {
 		pw = new PrintWriter(new BufferedWriter(new FileWriter(file)));
 	}
 	

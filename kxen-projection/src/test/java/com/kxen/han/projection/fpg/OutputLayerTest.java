@@ -22,8 +22,8 @@ public class OutputLayerTest {
 	@Before
 	public void setUp() throws Exception {
 		fileout = "out";
-		olf = new OutputLayer(fileout);
-		olc = new OutputLayer();
+		olf = OutputLayer.newInstance(fileout);
+		olc = OutputLayer.newInstance();
 	}
 	
 	@After

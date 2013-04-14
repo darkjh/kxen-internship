@@ -90,7 +90,7 @@ public class Projection {
 	public static void main(String[] args) throws Exception {
 		Stopwatch sw = new Stopwatch();	
 		sw.start();
-		Projection.project(args[0], new OutputLayer(args[1]), 
+		Projection.project(args[0], OutputLayer.newInstance(args[1]), 
 				Integer.parseInt(args[2]));
 		sw.stop();
 		

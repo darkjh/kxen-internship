@@ -15,7 +15,7 @@ public class ProjectionTest {
 	@Test
 	public void testProject() throws Exception {
 		TestExampleGen.generateFromTransacFile(new File("src/test/resources/nodeTestTransac"));
-		OutputLayer ol = new OutputLayer();
+		OutputLayer ol = OutputLayer.newInstance();
 		Projection.project("src/test/resources/TestExampleAutoGen", 
 				ol, 3);
 	}
