@@ -10,16 +10,17 @@ import org.junit.Test;
 
 public class ParallelCountingMapperReducerTest {
 	
-	MapDriver<LongWritable, Text, Text, LongWritable> mapDriver;
-	ReduceDriver<Text, LongWritable, Text, LongWritable> reduceDriver;
-	
 	@Test
 	public void testMapper() {
-		Text value = new Text("100\t23456\t15.0");
+		Text value = new Text("300	b f h j o");
 		new MapDriver<LongWritable, Text, Text, LongWritable>()
 		.withMapper(new ParallelCountingMapper())
 		.withInput(new LongWritable(1), value)
-		.withOutput(new Text("23456"), new LongWritable(1))
+		.withOutput(new Text("b"), new LongWritable(1))
+		.withOutput(new Text("f"), new LongWritable(1))
+		.withOutput(new Text("h"), new LongWritable(1))
+		.withOutput(new Text("j"), new LongWritable(1))
+		.withOutput(new Text("o"), new LongWritable(1))
 		.runTest();
 	}
 	
