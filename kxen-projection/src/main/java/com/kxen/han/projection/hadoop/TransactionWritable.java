@@ -9,6 +9,7 @@ import java.util.List;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.mahout.math.Arrays;
 
 public class TransactionWritable implements Writable, Iterable<Long> {
 	
@@ -73,5 +74,10 @@ public class TransactionWritable implements Writable, Iterable<Long> {
 				throw new UnsupportedOperationException();
 			}
 		};
+	}
+	
+	@Override
+	public String toString() {
+		return Arrays.toString(transacList);
 	}
 }

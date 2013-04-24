@@ -70,7 +70,7 @@ extends Mapper<LongWritable, Text, IntWritable, TransactionWritable> {
 		for (String s : itemsStr) {
 			Long item = Long.parseLong(s);
 			if (freq.containsKey(item)) {
-				items.add(item);				
+				items.add(item);
 			}
 		}
 		Collections.sort(items, byDescFrequencyOrdering);
