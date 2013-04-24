@@ -79,7 +79,6 @@ public class FPTree {
 		}
 		nodeChildren[parentNodeId][length++] = childNodeId;
 		childCount[parentNodeId] = length;
-
 	}
 
 	public final void addCount(int nodeId, int count) {
@@ -252,7 +251,7 @@ public class FPTree {
 		nodeChildren = null;
 	}
 	
-	// seems to assume item is continuous
+	/* assume item ranges from 0 to #item */
 	private int getHeaderIndex(int item) {
 		if (item >= headerTableLookup.length) {
 			resizeHeaderLookup(item);
