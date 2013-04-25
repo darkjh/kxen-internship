@@ -13,7 +13,6 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
@@ -22,7 +21,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
 public class ParallelProjectionMapper 
-extends Mapper<LongWritable, Text, IntWritable, TransactionWritable> {
+extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 	
 	private int numGroup;
 	private Map<Long, Long> freq;
@@ -61,14 +60,13 @@ extends Mapper<LongWritable, Text, IntWritable, TransactionWritable> {
 	}
 	
 	@Override
-	public void map(LongWritable key, Text value, Context context)
+	public void map(Text key, TransactionWritable value, Context context)
 			throws IOException, InterruptedException {
-		// parse input
-		String[] line = value.toString().split("\t");
-		String[] itemsStr = line[1].split(" ");
+//		// parse input
+//		String[] line = value.toString().split("\t");
+//		String[] itemsStr = line[1].split(" ");
 		ArrayList<Long> items = Lists.newArrayList();
-		for (String s : itemsStr) {
-			Long item = Long.parseLong(s);
+		for (Long item : value) {
 			if (freq.containsKey(item)) {
 				items.add(item);
 			}

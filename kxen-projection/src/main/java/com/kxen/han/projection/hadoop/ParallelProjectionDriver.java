@@ -46,7 +46,6 @@ public class ParallelProjectionDriver extends Configured implements Tool {
 	/**
 	 * Entry point for parallel bipartite graph projection
 	 */
-	@Override
 	public int run(String[] arg0) throws Exception {
 		CommandLineParser parser = new BasicParser();
 		CommandLine cli = parser.parse(initOptions(), arg0);
