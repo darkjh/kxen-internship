@@ -28,29 +28,30 @@ public class TransactionWritable implements Writable, Iterable<Long> {
 		}
 	}
 	
+	public TransactionWritable(Iterable<Long> transac, int size) {
+		this.size = size;
+		transacList = new long[size];
+		int i = 0;
+		for (Long l : transac) {
+			transacList[i++] = l;
+		}
+	}
+	
 	@Override
 	public void readFields(DataInput in) throws IOException {
-		LongWritable lw = new LongWritable();
-		IntWritable iw = new IntWritable();
-		
-		iw.readFields(in);
-		size = iw.get();
+		size = in.readInt();
 		transacList = new long[size];
 		
 		for (int i = 0; i < size; i++) {
-			lw.readFields(in);
-			transacList[i] = lw.get();
+			transacList[i] = in.readLong();
 		}
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		LongWritable lw = new LongWritable();
-		new IntWritable(size).write(out);
-		
+		out.writeInt(size);
 		for (int i = 0; i < size; i++) {
-			lw.set(transacList[i]);
-			lw.write(out);
+			out.writeLong(transacList[i]);
 		}
 	}
 

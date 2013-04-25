@@ -4,8 +4,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
 public class GraphLinkWritable implements Writable {
@@ -36,26 +34,16 @@ public class GraphLinkWritable implements Writable {
 	
 	@Override
 	public void readFields(DataInput in) throws IOException {
-		IntWritable iw = new IntWritable();
-		LongWritable lw = new LongWritable();
-		iw.readFields(in);
-		item1 = iw.get();
-		iw.readFields(in);
-		item2 = iw.get();
-		lw.readFields(in);
-		support = lw.get();
+		item1 = in.readInt();
+		item2 = in.readInt();
+		support = in.readLong();
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		IntWritable iw = new IntWritable();
-		LongWritable lw = new LongWritable();
-		iw.set(item1);
-		iw.write(out);
-		iw.set(item2);
-		iw.write(out);
-		lw.set(support);
-		lw.write(out);
+		out.writeInt(item1);
+		out.writeInt(item2);
+		out.writeLong(support);
 	}
 	
 	@Override
