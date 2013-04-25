@@ -22,11 +22,11 @@ public class PreProcessingMapperReducerTest {
 	
 	@Test
 	public void testReducer() {
-		new ReduceDriver<Text, Text, Text, Text>()
+		new ReduceDriver<Text, Text, Text, TransactionWritable>()
 		.withReducer(new PreProcessingReducer())
 		.withInputKey(new Text("22222"))
-		.withInputValues(Arrays.asList(new Text("a"), new Text("b")))
-		.withOutput(new Text("22222"), new Text("b a"))
+		.withInputValues(Arrays.asList(new Text("1"), new Text("2")))
+		.withOutput(new Text("22222"), new TransactionWritable(Arrays.asList(new Long[]{1L, 2L})))
 		.runTest();
 	}
 }
