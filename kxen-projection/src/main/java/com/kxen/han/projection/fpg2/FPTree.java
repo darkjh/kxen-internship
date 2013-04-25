@@ -136,7 +136,7 @@ public class FPTree {
 	}
 	
 	/** insert a transaction into the tree */
-	public int insertTransac(List<Long> transac) {
+	public int insertTransac(Iterable<Long> transac) {
 		int curr = getRoot();
 		int nodeCreated = 0;
 
