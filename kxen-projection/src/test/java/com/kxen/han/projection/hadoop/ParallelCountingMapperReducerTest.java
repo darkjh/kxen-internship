@@ -12,25 +12,26 @@ public class ParallelCountingMapperReducerTest {
 	
 	@Test
 	public void testMapper() {
-		Text value = new Text("300	b f h j o");
-		new MapDriver<LongWritable, Text, Text, LongWritable>()
+		TransactionWritable value = 
+				new TransactionWritable(Arrays.asList(new Long[]{1L,2L,3L,4L,5L}));
+		new MapDriver<Text, TransactionWritable, LongWritable, LongWritable>()
 		.withMapper(new ParallelCountingMapper())
-		.withInput(new LongWritable(1), value)
-		.withOutput(new Text("b"), new LongWritable(1))
-		.withOutput(new Text("f"), new LongWritable(1))
-		.withOutput(new Text("h"), new LongWritable(1))
-		.withOutput(new Text("j"), new LongWritable(1))
-		.withOutput(new Text("o"), new LongWritable(1))
+		.withInput(new Text("300"), value)
+		.withOutput(new LongWritable(1L), new LongWritable(1))
+		.withOutput(new LongWritable(2L), new LongWritable(1))
+		.withOutput(new LongWritable(3L), new LongWritable(1))
+		.withOutput(new LongWritable(4L), new LongWritable(1))
+		.withOutput(new LongWritable(5L), new LongWritable(1))
 		.runTest();
 	}
 	
 	@Test
 	public void testReducer() {
-		new ReduceDriver<Text, LongWritable, Text, LongWritable>()
+		new ReduceDriver<LongWritable, LongWritable, LongWritable, LongWritable>()
 		.withReducer(new ParallelCountingReducer())
-		.withInputKey(new Text("22222"))
+		.withInputKey(new LongWritable(22222L))
 		.withInputValues(Arrays.asList(new LongWritable(80), new LongWritable(8)))
-		.withOutput(new Text("22222"), new LongWritable(88))
+		.withOutput(new LongWritable(22222L), new LongWritable(88))
 		.runTest();
 	}
 }

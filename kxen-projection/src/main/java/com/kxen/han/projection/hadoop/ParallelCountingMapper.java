@@ -19,23 +19,15 @@ import org.apache.hadoop.mapreduce.Mapper;
  *
  */
 public class ParallelCountingMapper 
-extends Mapper<LongWritable, Text, Text, LongWritable> {
+extends Mapper<Text, TransactionWritable, LongWritable, LongWritable> {
 	
 	private static LongWritable ONE = new LongWritable(1L);
-	private static int ITEMS_POSITION = 1;
-	private static String SEP = "\t";
-	private static String ITEM_SEP = " ";
 	
 	@Override
-	public void map(LongWritable key, Text value, Context context)
+	public void map(Text key, TransactionWritable value, Context context)
 			throws IOException, InterruptedException {
-		String[] line = value.toString().split(SEP);
-		String[] items = line[ITEMS_POSITION].split(ITEM_SEP);
-		
-		for (String item : items) {
-			if (item.isEmpty())
-				continue;
-			context.write(new Text(item), ONE);
+		for (Long item : value) {
+			context.write(new LongWritable(item), ONE);
 		}
 	}
 }
