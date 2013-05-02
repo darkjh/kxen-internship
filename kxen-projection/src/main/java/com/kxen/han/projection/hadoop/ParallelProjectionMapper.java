@@ -20,6 +20,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
+/**
+ * Generate group-dependent transactions from a real transaction
+ * 
+ * @author Han JU
+ *
+ */
 public class ParallelProjectionMapper 
 extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 	
@@ -33,11 +39,11 @@ extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 		public int compare(Long left, Long right) {
 			int freqComp = freq.get(right).compareTo(freq.get(left));
 			// fixed order !!!
-			return freqComp != 0 ? freqComp :  right.compareTo(left);
+			return freqComp != 0 ? freqComp : right.compareTo(left);
 		}
 	};
 	
-	public int getGroup(long item) {
+	public static int getGroup(long item, int numGroup) {
 		return (int) (item % numGroup);
 	}
 	
@@ -77,10 +83,11 @@ extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 		// generate and output group-dependent transaction
 		// go through list in reverse order
 		for (int i = items.size()-1; i >= 0; i--) {
-			int group = getGroup(items.get(i));
+			int group = getGroup(items.get(i), numGroup);
 			if (!processed.contains(group)) {
 				processed.add(group);
 				List<Long> subTransac = items.subList(0, i+1); // include
+				// Collections.sort(subTransac, byDescFrequencyOrdering);
 				context.write(new IntWritable(group), new TransactionWritable(subTransac));
 			}
 		}

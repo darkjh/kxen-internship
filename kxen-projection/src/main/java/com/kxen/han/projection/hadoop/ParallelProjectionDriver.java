@@ -24,6 +24,7 @@ public class ParallelProjectionDriver extends Configured implements Tool {
 	static private final String TMP = "tempDir";
 	static private final String GROUP = "numGroup";
 	static private final String SUPP = "minSupport";
+	static private final String START = "startFrom";
 	
 	private static Options initOptions() {
 		Options ops = new Options();
@@ -33,12 +34,14 @@ public class ParallelProjectionDriver extends Configured implements Tool {
 		Option numGroup = OptionBuilder.withArgName("Group").hasArg().create(GROUP);
 		Option tmpPath = OptionBuilder.withArgName("temp").hasArg().create(TMP);
 		Option minSupport = OptionBuilder.withArgName("minSupport").hasArg().create(SUPP);
+		Option startFrom = OptionBuilder.withArgName("start").hasArg().create(START);
 		
 		ops.addOption(inputPath);
 		ops.addOption(outputPath);
 		ops.addOption(numGroup);
 		ops.addOption(tmpPath);
 		ops.addOption(minSupport);
+		ops.addOption(startFrom);
 		
 		return ops;
 	}
@@ -54,8 +57,10 @@ public class ParallelProjectionDriver extends Configured implements Tool {
 		String output = cli.getOptionValue(OUT);
 		String tmp = cli.getOptionValue(TMP);
 		int groupNum = Integer.parseInt(cli.getOptionValue(GROUP));
-		int minSupport = Integer.parseInt(cli.getOptionValue(SUPP));
-		ParallelProjection.runProjection(input, output, tmp, minSupport, groupNum);		
+		int minSupport = Integer.parseInt(cli.getOptionValue(SUPP, "2"));
+		int startFrom = Integer.parseInt(cli.getOptionValue(START, "1"));
+		ParallelProjection.runProjection(input, output, tmp, 
+				minSupport, groupNum, startFrom);		
 		return 0;
 	}
 	

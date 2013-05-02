@@ -6,12 +6,22 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.mahout.math.Arrays;
 
+import com.google.common.base.Joiner;
+
+/**
+ * Serializable class for a transaction list of items
+ * Use VLongWritable, reduce serialized file size
+ * 
+ * @author Han JU
+ *
+ */
 public class TransactionWritable implements Writable, Iterable<Long> {
+	
+	private static final Joiner joiner = Joiner.on(" ").skipNulls();
 	
 	int size;
 	long[] transacList;
@@ -41,17 +51,20 @@ public class TransactionWritable implements Writable, Iterable<Long> {
 	public void readFields(DataInput in) throws IOException {
 		size = in.readInt();
 		transacList = new long[size];
-		
+		VLongWritable vLongWriter = new VLongWritable();
 		for (int i = 0; i < size; i++) {
-			transacList[i] = in.readLong();
+			vLongWriter.readFields(in);
+			transacList[i] = vLongWriter.get();
 		}
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
 		out.writeInt(size);
+		VLongWritable vLongWriter = new VLongWritable();
 		for (int i = 0; i < size; i++) {
-			out.writeLong(transacList[i]);
+			vLongWriter.set(transacList[i]);
+			vLongWriter.write(out);
 		}
 	}
 
@@ -79,6 +92,10 @@ public class TransactionWritable implements Writable, Iterable<Long> {
 	
 	@Override
 	public String toString() {
-		return Arrays.toString(transacList);
+		String[] res = new String[size];
+		for (int i = 0; i < size; i++) {
+			res[i] = Long.toString(transacList[i]);
+		}
+		return joiner.join(res);
 	}
 }

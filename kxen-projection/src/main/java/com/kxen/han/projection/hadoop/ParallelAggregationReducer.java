@@ -9,19 +9,35 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
+/**
+ * Aggregate the ouput of parallel projection, keep only the best
+ * pair (wrt support) and filter out redundancies
+ * 
+ * @author Han JU
+ *
+ */
 public class ParallelAggregationReducer
-extends Reducer<IntWritable, GraphLinkWritable, NullWritable, Text> {
+extends Reducer<IntWritable, GraphLinksWritable, NullWritable, Text> {
 	@Override
 	public void reduce(IntWritable key, 
-			Iterable<GraphLinkWritable> values, Context context) 
+			Iterable<GraphLinksWritable> values, Context context) 
 					throws IOException, InterruptedException {
 		Map<Integer, Long> best = new HashMap<Integer, Long>();
-		for (GraphLinkWritable glw : values) {
-			int other = glw.getItem2();
-			long bestSoFar = 
-					best.containsKey(other) ? best.get(other) : 0;
-			if (glw.getSupport() > bestSoFar) {
-				best.put(other, glw.getSupport());
+		for (GraphLinksWritable glw : values) {
+//			int other = glw.getItem2();
+//			long bestSoFar = 
+//					best.containsKey(other) ? best.get(other) : 0;
+//			if (glw.getSupport() > bestSoFar) {
+//				best.put(other, glw.getSupport());
+//			}
+			int size = glw.getSize();
+			for (int i = 0; i < size; i++) {
+				int other = glw.getOther(i);
+				long bestSoFar = 
+						best.containsKey(other) ? best.get(other) : 0;
+				if (glw.getSupport(i) > bestSoFar) {
+					best.put(other, glw.getSupport(i));
+				}
 			}
 		}
 		
