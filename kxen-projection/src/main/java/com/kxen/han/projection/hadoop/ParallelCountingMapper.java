@@ -6,6 +6,8 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import com.kxen.han.projection.hadoop.writable.TransactionWritable;
+
 /**
  * First step of parallel bipartite graph projection
  * This step counts occurrence of each item, just like the word count example

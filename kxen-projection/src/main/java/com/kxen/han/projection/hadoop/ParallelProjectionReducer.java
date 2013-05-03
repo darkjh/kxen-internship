@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 import com.kxen.han.projection.fpg2.FPTree;
+import com.kxen.han.projection.hadoop.writable.GraphLinksWritable;
+import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 /**
  * FP-Tree approach projection on group-dependent transactions

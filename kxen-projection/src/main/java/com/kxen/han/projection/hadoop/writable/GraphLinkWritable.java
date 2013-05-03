@@ -1,4 +1,4 @@
-package com.kxen.han.projection.hadoop;
+package com.kxen.han.projection.hadoop.writable;
 
 import java.io.DataInput;
 import java.io.DataOutput;

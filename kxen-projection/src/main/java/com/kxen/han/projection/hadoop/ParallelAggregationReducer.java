@@ -9,6 +9,8 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
+import com.kxen.han.projection.hadoop.writable.GraphLinksWritable;
+
 /**
  * Aggregate the ouput of parallel projection, keep only the best
  * pair (wrt support) and filter out redundancies

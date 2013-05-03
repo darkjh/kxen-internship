@@ -19,6 +19,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 /**
  * Generate group-dependent transactions from a real transaction

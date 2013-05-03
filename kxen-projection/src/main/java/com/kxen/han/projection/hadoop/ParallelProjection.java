@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
+import com.kxen.han.projection.hadoop.writable.GraphLinksWritable;
+import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 
 /**
@@ -260,8 +262,10 @@ public class ParallelProjection {
 		conf.set("mapred.compress.map.output", "true");
 		conf.set("mapred.output.compress", "true");
 	    conf.set("mapred.output.compression.type", "BLOCK");
-	    conf.set("mapred.child.java.opts", "-Xmx2g");
-	    conf.set("mapred.job.reuse.jvm.num.tasks", "-1");			// reducer reuse
+	    // TODO use task memory monitoring
+	    conf.set("mapred.child.java.opts", "-Xmx4g");
+	    conf.set("mapred.job.reuse.jvm.num.tasks", "-1");		// reducer reuse
+	    conf.set("io.sort.mb", "500");							// less spills
 	    // TODO try other codecs, like snappy
 	    conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.GzipCodec");
 	    
@@ -269,7 +273,7 @@ public class ParallelProjection {
 		job.setJarByClass(ParallelProjection.class);
 		
 		int numReduce = Integer.parseInt(conf.get(NUM_GROUP));
-		job.setNumReduceTasks(numReduce);
+		job.setNumReduceTasks(REDUCE_SLOT / 2);
 		
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));

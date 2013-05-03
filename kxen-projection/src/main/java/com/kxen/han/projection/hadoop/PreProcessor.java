@@ -18,6 +18,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.kxen.han.projection.hadoop.writable.TransactionWritable;
+
 /**
  * Convert a user-item-count format file into transaction format
  * 

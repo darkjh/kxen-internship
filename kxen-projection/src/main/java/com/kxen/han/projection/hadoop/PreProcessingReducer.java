@@ -9,6 +9,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
+import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 /**
  * {@link com.kxen.han.projection.hadoop.PreProcessingMapper}
