@@ -137,6 +137,10 @@ public class FPTree {
 	
 	/** insert a transaction into the tree */
 	public int insertTransac(Iterable<Long> transac) {
+		return insertTransac(transac, 1);
+	}
+	
+	public int insertTransac(Iterable<Long> transac, int support) {
 		int curr = getRoot();
 		int nodeCreated = 0;
 
@@ -144,11 +148,11 @@ public class FPTree {
 			int item = (int) longItem;
 			int child = childWithItem(curr, item);
 			if (child == -1) {
-				child = createNode(curr, item);
+				child = createNode(curr, item, support);
 				curr = child;
 				nodeCreated++;
 			} else {
-				addCount(child, 1);
+				addCount(child, support);
 				curr = child;
 			}
 		}
@@ -156,6 +160,10 @@ public class FPTree {
 	}
 
 	private final int createNode(int parentNodeId, int item) {
+		return createNode(parentNodeId, item, 1);
+	}
+	
+	private final int createNode(int parentNodeId, int item, int support) {
 		if (nodeID >= this.items.length) {
 			resize();
 		}
@@ -164,7 +172,7 @@ public class FPTree {
 		next[nodeID] = -1;
 		parent[nodeID] = parentNodeId;
 		this.items[nodeID] = item;
-		nodeCount[nodeID] = 1;
+		nodeCount[nodeID] = support;
 
 		if (nodeChildren[nodeID] == null) {
 			nodeChildren[nodeID] = new int[CHILDREN_INITIAL_SIZE];
