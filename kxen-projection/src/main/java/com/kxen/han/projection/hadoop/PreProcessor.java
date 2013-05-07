@@ -1,5 +1,9 @@
 package com.kxen.han.projection.hadoop;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Set;
+
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -9,8 +13,10 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -18,6 +24,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.collect.Sets;
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 /**
@@ -30,15 +37,34 @@ public class PreProcessor extends Configured implements Tool {
 	
 	static private final String IN = "input";
 	static private final String OUT = "output";
+	static private final String NO_USER = "noUser";
+	
+	private static class PreProcessingReducerNoUser
+	extends Reducer<Text, Text, NullWritable, TransactionWritable> {
+		@Override
+		public void reduce(Text key, Iterable<Text> values,
+				Context context) throws IOException, InterruptedException {
+			Set<Long> items = Sets.newHashSet();
+			for (Text item: values) {
+				items.add(Long.parseLong(item.toString()));
+			}
+			context.write(NullWritable.get(), 
+					new TransactionWritable(Arrays.asList(items.toArray(new Long[]{}))));
+		}
+
+	}
 		
 	private static Options initOptions() {
 		Options ops = new Options();
 		
 		Option inputPath = OptionBuilder.withArgName("input").hasArg().create(IN);
 		Option outputPath = OptionBuilder.withArgName("output").hasArg().create(OUT);
+		Option noUser = OptionBuilder.withArgName("noUser").create(NO_USER);
+		
 		
 		ops.addOption(inputPath);
 		ops.addOption(outputPath);
+		ops.addOption(noUser);
 		
 		return ops;
 	}
@@ -72,7 +98,11 @@ public class PreProcessor extends Configured implements Tool {
 	    job.setOutputKeyClass(Text.class);
 	    job.setOutputValueClass(TransactionWritable.class);
 	    job.setMapperClass(PreProcessingMapper.class);
-	    job.setReducerClass(PreProcessingReducer.class);
+	    
+	    if (cli.hasOption(NO_USER))
+	    	job.setReducerClass(PreProcessingReducerNoUser.class);
+	    else
+	    	job.setReducerClass(PreProcessingReducer.class);
 	    
 	    if (!job.waitForCompletion(true)) {
 	    	throw new IllegalStateException("Job failed ...");

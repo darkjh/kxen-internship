@@ -16,9 +16,9 @@ public class ParallelCountingMapperReducerTest {
 	public void testMapper() {
 		TransactionWritable value = 
 				new TransactionWritable(Arrays.asList(new Long[]{1L,2L,3L,4L,5L}));
-		new MapDriver<Text, TransactionWritable, LongWritable, LongWritable>()
+		new MapDriver<LongWritable, TransactionWritable, LongWritable, LongWritable>()
 		.withMapper(new ParallelCountingMapper())
-		.withInput(new Text("300"), value)
+		.withInput(new LongWritable(300l), value)
 		.withOutput(new LongWritable(1L), new LongWritable(1))
 		.withOutput(new LongWritable(2L), new LongWritable(1))
 		.withOutput(new LongWritable(3L), new LongWritable(1))

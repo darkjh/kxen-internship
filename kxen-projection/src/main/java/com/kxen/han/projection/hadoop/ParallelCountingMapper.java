@@ -3,7 +3,6 @@ package com.kxen.han.projection.hadoop;
 import java.io.IOException;
 
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
@@ -21,12 +20,12 @@ import com.kxen.han.projection.hadoop.writable.TransactionWritable;
  *
  */
 public class ParallelCountingMapper 
-extends Mapper<Text, TransactionWritable, LongWritable, LongWritable> {
+extends Mapper<LongWritable, TransactionWritable, LongWritable, LongWritable> {
 	
 	private static LongWritable ONE = new LongWritable(1L);
 	
 	@Override
-	public void map(Text key, TransactionWritable value, Context context)
+	public void map(LongWritable key, TransactionWritable value, Context context)
 			throws IOException, InterruptedException {
 		for (Long item : value) {
 			context.write(new LongWritable(item), ONE);

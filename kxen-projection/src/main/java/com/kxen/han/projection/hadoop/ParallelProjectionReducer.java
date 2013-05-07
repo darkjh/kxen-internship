@@ -1,21 +1,21 @@
 package com.kxen.han.projection.hadoop;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 import com.kxen.han.projection.fpg2.FPTree;
-import com.kxen.han.projection.hadoop.writable.GraphLinksWritable;
-import com.kxen.han.projection.hadoop.writable.TransactionWritable;
+import com.kxen.han.projection.hadoop.writable.TransactionTree;
 
 /**
  * FP-Tree approach projection on group-dependent transactions
@@ -26,7 +26,7 @@ import com.kxen.han.projection.hadoop.writable.TransactionWritable;
  *
  */
 public class ParallelProjectionReducer
-extends Reducer<IntWritable, TransactionWritable, IntWritable, GraphLinksWritable> {
+extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 	
 	private static final Logger log = 
 			LoggerFactory.getLogger(ParallelProjectionReducer.class);
@@ -34,6 +34,7 @@ extends Reducer<IntWritable, TransactionWritable, IntWritable, GraphLinksWritabl
 	private int minSupport;
 	private int group;
 	private int numGroup;
+	private int maxPerGroup;
 
 	@Override
 	public void setup(Context context)
@@ -42,21 +43,25 @@ extends Reducer<IntWritable, TransactionWritable, IntWritable, GraphLinksWritabl
 		Configuration conf = context.getConfiguration();
 		minSupport = Integer.parseInt(conf.get(ParallelProjection.MIN_SUPPORT));
 		numGroup = Integer.parseInt(conf.get(ParallelProjection.NUM_GROUP));
+		maxPerGroup = conf.getInt(ParallelProjection.MAX_PER_GROUP, 100);
 	}
 
 	@Override
-	public void reduce(IntWritable key, Iterable<TransactionWritable> values,
+	public void reduce(IntWritable key, Iterable<TransactionTree> values,
 			Context context) throws IOException, InterruptedException {
 		log.info("Reduce started ...");
 		// construct FP-Tree
 		FPTree fpt = new FPTree();
 		long cc = 0;
-		for (TransactionWritable tw : values)
-			cc += fpt.insertTransac(tw);
+		for (TransactionTree tt : values) {
+			for (Pair<List<Long>, Long> transac : tt) {
+				cc += fpt.insertTransac(transac.getLeft(), transac.getRight().intValue());
+			}
+		}
 		fpt.clean();
 		log.info("FP-Tree construction finished, created {} nodes ...", cc);
 
-		Map<Integer, List<Pair<Integer, Long>>> results = Maps.newTreeMap();
+		// Map<Integer, List<Pair<Integer, Long>>> results = Maps.newTreeMap();
 		group = key.get();
 
 		// projection
@@ -65,6 +70,7 @@ extends Reducer<IntWritable, TransactionWritable, IntWritable, GraphLinksWritabl
 		for (int item : headerTableItems) {
 			// only project for items in the current group
 			// avoid lots of redundancy
+			// if (ParallelProjectionMapper.getGroupByMaxPerGroup(item, maxPerGroup) != group)
 			if (ParallelProjectionMapper.getGroup(item, numGroup) != group)
 				continue;
 			if (++cc % 1000 == 0)
@@ -98,17 +104,19 @@ extends Reducer<IntWritable, TransactionWritable, IntWritable, GraphLinksWritabl
 						k = other;
 						v = item;
 					}
-					if (!results.containsKey(k))
-						results.put(k, new LinkedList<Pair<Integer, Long>>());
-					results.get(k).add(Pair.of(v, pairSupport));
+//					if (!results.containsKey(k))
+//						results.put(k, new ArrayList<Pair<Integer, Long>>());
+//					results.get(k).add(Pair.of(v, pairSupport));
+					String out = k+"\t"+v+"\t"+pairSupport;
+					context.write(NullWritable.get(), new Text(out));
 				}
 			}
 		}
-		fpt = null;
-		log.info("Projection finished, output ...");
-		for (Integer item : results.keySet()) {
-			context.write(new IntWritable(item), new GraphLinksWritable(item,
-					results.get(item)));
-		}
+//		fpt = null;
+//		log.info("Projection finished, output ...");
+//		for (Integer item : results.keySet()) {
+//			context.write(new IntWritable(item), new GraphLinksWritable(item,
+//					results.get(item)));
+//		}
 	}
 }

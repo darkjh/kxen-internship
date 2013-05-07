@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import com.kxen.han.projection.hadoop.writable.GraphLinksWritable;
+import com.kxen.han.projection.hadoop.writable.TransactionTree;
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 
@@ -46,6 +47,7 @@ public class ParallelProjection {
 	public static final String F_LIST = "f-list";
 	public static final String MIN_SUPPORT = "minSupport";
 	public static final String NUM_GROUP = "numGroup";
+	public static final String MAX_PER_GROUP = "maxPerGroup";
 	public static final String PARALLEL_COUNTING = "parallel-counting";
 	public static final String PRE_PROCESSING = "pre-processing";
 	public static final String PARALLEL_PROJECTION = "parallel-projection";
@@ -118,20 +120,20 @@ public class ParallelProjection {
 		// build local FP-Tree and do partial projection
 		if (startFrom <= 4) {
 			sw.reset().start();
-			startParallelProjection(transacInput, tmp, conf);
+			startParallelProjection(transacInput, output, conf);
 			sw.stop();
 			log.info("Parallel projection finished, took {} ms ...", sw.elapsed(TimeUnit.MILLISECONDS));
 		}
 		
 		// step4, aggregation
 		// aggregate partial projection results
-		if (startFrom <= 5) {
-			sw.reset().start();
-			String partialResults = tmp+"/"+PARALLEL_PROJECTION;
-			startParallelAggregation(partialResults, output, conf); 
-			sw.stop();
-			log.info("Parallel aggregation finished, took {} ms ...,", sw.elapsed(TimeUnit.MILLISECONDS));
-		}
+//		if (startFrom <= 5) {
+//			sw.reset().start();
+//			String partialResults = tmp+"/"+PARALLEL_PROJECTION;
+//			startParallelAggregation(partialResults, output, conf); 
+//			sw.stop();
+//			log.info("Parallel aggregation finished, took {} ms ...,", sw.elapsed(TimeUnit.MILLISECONDS));
+//		}
 		
 		swAll.stop();
 		log.info("All finished, took {} ms ...", swAll.elapsed(TimeUnit.MILLISECONDS));
@@ -174,7 +176,7 @@ public class ParallelProjection {
 	    
 	    job.setMapOutputKeyClass(Text.class);
 	    job.setMapOutputValueClass(Text.class);
-	    job.setOutputKeyClass(Text.class);
+	    job.setOutputKeyClass(LongWritable.class);
 	    job.setOutputValueClass(TransactionWritable.class);
 	    job.setMapperClass(PreProcessingMapper.class);
 	    job.setReducerClass(PreProcessingReducer.class);
@@ -250,6 +252,14 @@ public class ParallelProjection {
 		oos.writeObject(freq);
 		oos.close();
 		DistributedCache.addCacheFile(fListPath.toUri(), conf);		// add to dCache
+		
+	    // set param to control group size in MR jobs
+	    int numGroup = conf.getInt(NUM_GROUP, 100);
+	    int maxPerGroup = freq.size() / numGroup;
+	    if (freq.size() % numGroup != 0) {
+	      maxPerGroup++;
+	    }
+	    conf.set(MAX_PER_GROUP, Integer.toString(maxPerGroup));
 	}
 	
 	/**
@@ -257,13 +267,14 @@ public class ParallelProjection {
 	 */
 	public static void startParallelProjection(
 			String input,
-			String tmp,
+			String output,
 			Configuration conf) throws IOException, InterruptedException, ClassNotFoundException {
 		conf.set("mapred.compress.map.output", "true");
-		conf.set("mapred.output.compress", "true");
+		conf.set("mapred.output.compress", "false");
 	    conf.set("mapred.output.compression.type", "BLOCK");
+	    conf.set("dfs.replication", "1");						// replication 1 for results
 	    // TODO use task memory monitoring
-	    conf.set("mapred.child.java.opts", "-Xmx4g");
+	    conf.set("mapred.child.java.opts", "-Xmx2g");
 	    conf.set("mapred.job.reuse.jvm.num.tasks", "-1");		// reducer reuse
 	    conf.set("io.sort.mb", "500");							// less spills
 	    // TODO try other codecs, like snappy
@@ -273,26 +284,31 @@ public class ParallelProjection {
 		job.setJarByClass(ParallelProjection.class);
 		
 		int numReduce = Integer.parseInt(conf.get(NUM_GROUP));
-		job.setNumReduceTasks(REDUCE_SLOT / 2);
+		job.setNumReduceTasks(numReduce);
 		
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));
-	    Path output = new Path(tmp, PARALLEL_PROJECTION);
+	    Path out = new Path(output, PARALLEL_PROJECTION);
 	    
 	    // delete existing tmp folder
-	    delete(output, conf);
+	    delete(out, conf);
 	    
-	    FileOutputFormat.setOutputPath(job, output);
+	    FileOutputFormat.setOutputPath(job, out);
 	    job.setInputFormatClass(SequenceFileInputFormat.class);
 	    job.setOutputFormatClass(SequenceFileOutputFormat.class);
 	    // job.setOutputFormatClass(TextOutputFormat.class);
 	    
-	    job.setMapOutputKeyClass(IntWritable.class);
-	    job.setMapOutputValueClass(TransactionWritable.class);
+//	    job.setMapOutputKeyClass(IntWritable.class);
+//	    job.setMapOutputValueClass(TransactionTree.class);
+//	    job.setOutputKeyClass(NullWritable.class);
+//	    job.setOutputValueClass(Text.class);
+	    
 	    job.setOutputKeyClass(IntWritable.class);
-	    job.setOutputValueClass(GraphLinksWritable.class);
+	    job.setOutputValueClass(TransactionTree.class);
+	    
 	    job.setMapperClass(ParallelProjectionMapper.class);
-	    job.setReducerClass(ParallelProjectionReducer.class);
+	    // job.setCombinerClass(ParallelProjectionCombiner.class);
+	    // job.setReducerClass(ParallelProjectionReducer.class);
 	    
 	    if (!job.waitForCompletion(false)) {
 	    	throw new IllegalStateException("Job failed ...");
@@ -301,6 +317,7 @@ public class ParallelProjection {
 	
 	/**
 	 * Start step 4, aggregation of partial results
+	 * Not needed if we take all graph edges
 	 */
 	public static void startParallelAggregation(
 			String input,

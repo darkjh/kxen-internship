@@ -13,12 +13,14 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.kxen.han.projection.hadoop.writable.TransactionTree;
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 /**
@@ -28,9 +30,10 @@ import com.kxen.han.projection.hadoop.writable.TransactionWritable;
  *
  */
 public class ParallelProjectionMapper 
-extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
+extends Mapper<LongWritable, TransactionWritable, IntWritable, TransactionTree> {
 	
 	private int numGroup;
+	private int maxPerGroup;
 	private Map<Long, Long> freq;
 	
 	private Ordering<Long> byDescFrequencyOrdering = new Ordering<Long>() {
@@ -44,6 +47,10 @@ extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 		}
 	};
 	
+	public static int getGroupByMaxPerGroup(long item, int maxPerGroup) {
+		return (int) (item / maxPerGroup);
+	}
+	
 	public static int getGroup(long item, int numGroup) {
 		return (int) (item % numGroup);
 	}
@@ -53,6 +60,7 @@ extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 		super.setup(context);
 		Configuration conf = context.getConfiguration();
 		numGroup = Integer.parseInt(conf.get(ParallelProjection.NUM_GROUP));
+		maxPerGroup = conf.getInt(ParallelProjection.MAX_PER_GROUP, 100);
 		Path[] caches = DistributedCache.getLocalCacheFiles(conf);
 		FileSystem fs = FileSystem.getLocal(conf); // cache is stored locally
 		Path fListPath = fs.makeQualified(caches[0]);
@@ -67,11 +75,8 @@ extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 	}
 	
 	@Override
-	public void map(Text key, TransactionWritable value, Context context)
+	public void map(LongWritable key, TransactionWritable value, Context context)
 			throws IOException, InterruptedException {
-//		// parse input
-//		String[] line = value.toString().split("\t");
-//		String[] itemsStr = line[1].split(" ");
 		ArrayList<Long> items = Lists.newArrayList();
 		for (Long item : value) {
 			if (freq.containsKey(item)) {
@@ -83,13 +88,13 @@ extends Mapper<Text, TransactionWritable, IntWritable, TransactionWritable> {
 		Set<Integer> processed = Sets.newHashSet();
 		// generate and output group-dependent transaction
 		// go through list in reverse order
-		for (int i = items.size()-1; i >= 0; i--) {
+		for (int i = items.size()-1; i >= 0 && processed.size() < numGroup; i--) {
+			// int group = getGroupByMaxPerGroup(items.get(i), maxPerGroup);
 			int group = getGroup(items.get(i), numGroup);
 			if (!processed.contains(group)) {
 				processed.add(group);
 				List<Long> subTransac = items.subList(0, i+1); // include
-				// Collections.sort(subTransac, byDescFrequencyOrdering);
-				context.write(new IntWritable(group), new TransactionWritable(subTransac));
+				context.write(new IntWritable(group), new TransactionTree(subTransac, 1l));
 			}
 		}
 	}

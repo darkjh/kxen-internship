@@ -24,11 +24,11 @@ public class PreProcessingMapperReducerTest {
 	
 	@Test
 	public void testReducer() {
-		new ReduceDriver<Text, Text, Text, TransactionWritable>()
+		new ReduceDriver<Text, Text, LongWritable, TransactionWritable>()
 		.withReducer(new PreProcessingReducer())
 		.withInputKey(new Text("22222"))
 		.withInputValues(Arrays.asList(new Text("1"), new Text("2")))
-		.withOutput(new Text("22222"), new TransactionWritable(Arrays.asList(new Long[]{1L, 2L})))
+		.withOutput(new LongWritable(22222l), new TransactionWritable(Arrays.asList(new Long[]{1L, 2L})))
 		.runTest();
 	}
 }
