@@ -10,8 +10,9 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.io.VIntWritable;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
 
 /**
@@ -24,6 +25,8 @@ import com.google.common.collect.Lists;
  */
 public class TransactionTree 
 implements Writable, Iterable<Pair<List<Long>, Long>> {
+	
+	private static final Logger log = LoggerFactory.getLogger(TransactionTree.class);
 
 	/* pre-defined constants */
 	private static final int ROOT_NODE_ID = 0;
@@ -36,10 +39,9 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 	private int[][] nodeChildren; 	/* node id -> [children node ids] */
 	private int[] nodeCount; 		/* count of support of each node */
 	private int nodeID; 			/* next node's node id */
-	// private int[] parent; 		/* node id -> parent node id */
 
-	private Pair<List<Long>, Long> transac;
-	private boolean singleTransac;
+	private List<Pair<List<Long>, Long>> transactions;
+	private boolean notCompressed;
 
 	public TransactionTree() {
 		this(INITIAL_SIZE);
@@ -54,12 +56,18 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 		nodeCount = new int[size];
 		nodeChildren = new int[size][];
 		createRootNode();
-		singleTransac = false;
+		notCompressed = false;
 	}
 
 	public TransactionTree(List<Long> transac, long support) {
-		this.transac = Pair.of(transac, support);
-		singleTransac = true;
+		transactions = Lists.newArrayList();
+		transactions.add(Pair.of(transac, support));
+		notCompressed = true;
+	}
+
+	public TransactionTree(List<Pair<List<Long>, Long>> transacs) {
+		transactions = transacs;
+		notCompressed = true;
 	}
 
 	private final void createRootNode() {
@@ -78,6 +86,10 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 
 	public int getRoot() {
 		return ROOT_NODE_ID;
+	}
+	
+	public final boolean isEmpty() {
+		return nodeID <= 1;
 	}
 
 	public final void addChild(int parentNodeId, int childNodeId) {
@@ -111,7 +123,15 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 		}
 		return nodeChildren[nodeId][index];
 	}
-
+	
+	public int childCount() {
+		int sum = 0;
+		for (int i = 0; i < nodeID; i++) {
+			sum += childCount[i];
+		}
+		return sum;
+	}
+	
 	public final int childCount(int nodeId) {
 		return childCount[nodeId];
 	}
@@ -149,27 +169,22 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 	
 	@Override
 	public Iterator<Pair<List<Long>, Long>> iterator() {
-		if (singleTransac) {
-			return new AbstractIterator<Pair<List<Long>, Long>> () {
-				int i = 0;
-				@Override
-				protected Pair<List<Long>, Long> computeNext() {
-					return i++ == 0 ? transac : endOfData();
-				}
-			};
-		} else {
-			return new TransactionTreeIterator(this);
-		}
+		return notCompressed ? 
+				transactions.iterator() : new TransactionTreeIterator2(this);
 	}
 
 	private final int createNode(int parentNodeId, int item) {
+		return createNode(parentNodeId, item, 1);
+	}
+	
+	private final int createNode(int parentNodeId, int item, int support) {
 		if (nodeID >= this.items.length) {
 			resize();
 		}
 
 		childCount[nodeID] = 0;
 		this.items[nodeID] = item;
-		nodeCount[nodeID] = 1;
+		nodeCount[nodeID] = support;
 
 		if (nodeChildren[nodeID] == null) {
 			nodeChildren[nodeID] = new int[CHILDREN_INITIAL_SIZE];
@@ -179,25 +194,59 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 		addChild(parentNodeId, childNodeId);
 		return childNodeId;
 	}
+	
+	public TransactionTree getCompressedTree() {
+		TransactionTree ctree = new TransactionTree();
+		int node = 0;
+		int size = 0;
+		List<Pair<List<Long>, Long>> transacs = Lists.newArrayList();
+		for (Pair<List<Long>, Long> p : this) {
+			transacs.add(p);
+			node += ctree.insertTransac(p.getLeft(), p.getRight().intValue());
+			size += p.getLeft().size() + 2;
+		}
+
+//		log.info("----------------------------");
+//	        log.info("Nodes in UnCompressed Tree: {} ", nodeID);
+//	        log.info("UnCompressed Tree Size: {}", (this.nodeID * 4 * 4 + this.childCount() * 4) / 1000000.0);
+//	        log.info("Nodes in Compressed Tree: {} ", node);
+//	        log.info("Compressed Tree Size: {}", (node * 4 * 4 + ctree.childCount() * 4) / 1000000.0);
+//	        log.info("TransactionSet Size: {}", size * 16 / 1000000.0);
+//	    log.info("----------------------------");
+		
+		// compare sizes then decide which format to use
+		// Long object takes 24 bytes (8 header, 8 long, some other info. + padding)
+		// int takes 4 bytes
+		if (node * 4 * 4 + ctree.childCount() * 4 <= size * 24) {
+			return ctree;
+		} else {
+			return new TransactionTree(transacs);
+		}
+	}
 
 	@Override
 	public void readFields(DataInput in) throws IOException {
-		singleTransac = in.readBoolean();
+		notCompressed = in.readBoolean();
 
 		VIntWritable intWriter = new VIntWritable();
 		VLongWritable longWriter = new VLongWritable();
 
-		if (singleTransac) {
+		if (notCompressed) {
 			intWriter.readFields(in);
-			int length = intWriter.get();
-			List<Long> items = Lists.newArrayList();
-			for (int j = 0; j < length; j++) {
+			int size = intWriter.get();
+			transactions = Lists.newArrayListWithCapacity(size);
+			for (int i = 0; i < size; i++) {
+				intWriter.readFields(in);
+				int length = intWriter.get();
+				List<Long> items = Lists.newArrayList();
+				for (int j = 0; j < length; j++) {
+					longWriter.readFields(in);
+					items.add(longWriter.get());
+				}
 				longWriter.readFields(in);
-				items.add(longWriter.get());
+				Long support = longWriter.get();
+				transactions.add(Pair.of(items, support));
 			}
-			longWriter.readFields(in);
-			Long support = longWriter.get();
-			transac = Pair.of(items, support);
 		} else {
 			intWriter.readFields(in);
 			nodeID = intWriter.get();
@@ -224,21 +273,25 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		out.writeBoolean(singleTransac);
+		out.writeBoolean(notCompressed);
 		VIntWritable intWriter = new VIntWritable();
 		VLongWritable longWriter = new VLongWritable();
 		
-		if (singleTransac) {
-			intWriter.set(transac.getLeft().size());
+		if (notCompressed) {
+			intWriter.set(transactions.size());
 			intWriter.write(out);
-			List<Long> items = transac.getLeft();
-			for (int i = 0; i < items.size(); i++) {
-				long item = items.get(i);
-				longWriter.set(item);
+			for (Pair<List<Long>, Long> transac : transactions) {
+				intWriter.set(transac.getLeft().size());
+				intWriter.write(out);
+				List<Long> items = transac.getLeft();
+				for (int i = 0; i < items.size(); i++) {
+					long item = items.get(i);
+					longWriter.set(item);
+					longWriter.write(out);
+				}
+				longWriter.set(transac.getRight());
 				longWriter.write(out);
 			}
-			longWriter.set(transac.getRight());
-			longWriter.write(out);
 		} else {
 			intWriter.set(nodeID);
 			intWriter.write(out);
@@ -291,5 +344,34 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 		nodeChildren[nodeId] = new int[size];
 		System.arraycopy(oldNodeChildren, 0, this.nodeChildren[nodeId], 0,
 				length);
+	}
+	
+	private void toStringHelper(StringBuilder sb, int currNode, String prefix) {
+		if (childCount[currNode] == 0) {
+			sb.append(prefix).append("-{item:").append(items[currNode])
+					.append(", id: ").append(currNode).append(", cnt:")
+					.append(nodeCount[currNode]).append("}\n");
+		} else {
+			StringBuilder newPre = new StringBuilder(prefix);
+			newPre.append("-{item:").append(items[currNode])
+					.append(", id: ").append(currNode).append(", cnt:")
+					.append(nodeCount[currNode]).append('}');
+			StringBuilder fakePre = new StringBuilder();
+			while (fakePre.length() < newPre.length()) {
+				fakePre.append(' ');
+			}
+			for (int i = 0; i < childCount[currNode]; i++) {
+				toStringHelper(sb, nodeChildren[currNode][i], (i == 0 ? newPre
+						: fakePre).toString() + '-' + i + "->");
+			}
+		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder("[FPTree\n");
+		toStringHelper(sb, 0, "  ");
+		sb.append("\n]\n");
+		return sb.toString();
 	}
 }

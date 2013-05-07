@@ -8,7 +8,6 @@ import java.util.List;
 
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.mahout.math.Arrays;
 
 import com.google.common.base.Joiner;
 
