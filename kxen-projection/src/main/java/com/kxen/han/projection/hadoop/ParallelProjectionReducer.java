@@ -107,8 +107,12 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 //					if (!results.containsKey(k))
 //						results.put(k, new ArrayList<Pair<Integer, Long>>());
 //					results.get(k).add(Pair.of(v, pairSupport));
-					String out = k+"\t"+v+"\t"+pairSupport;
-					context.write(NullWritable.get(), new Text(out));
+					StringBuilder out = new StringBuilder();
+					out.append(k); out.append("\t");
+					out.append(v); out.append("\t");
+					out.append(pairSupport);
+					// String out = k+"\t"+v+"\t"+pairSupport;
+					context.write(NullWritable.get(), new Text(out.toString()));
 				}
 			}
 		}

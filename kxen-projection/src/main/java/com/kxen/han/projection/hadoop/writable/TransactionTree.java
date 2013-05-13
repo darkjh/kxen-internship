@@ -217,9 +217,13 @@ implements Writable, Iterable<Pair<List<Long>, Long>> {
 		// compare sizes then decide which format to use
 		// Long object takes 24 bytes (8 header, 8 long, some other info. + padding)
 		// int takes 4 bytes
-		if (node * 4 * 4 + ctree.childCount() * 4 <= size * 24) {
+		// TODO for the moment combiner does not work well (it actually increase mapper output size)
+		// need a more precise calculation of the ouput size
+		if (node * 4 * 4 + ctree.childCount() * 4 <= size * 8) {
+			log.info("Compressed FP-Tree");
 			return ctree;
 		} else {
+			log.info("Uncompressed list");
 			return new TransactionTree(transacs);
 		}
 	}

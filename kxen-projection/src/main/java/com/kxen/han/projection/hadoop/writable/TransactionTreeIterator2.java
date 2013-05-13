@@ -12,6 +12,9 @@ import com.google.common.collect.Lists;
 /**
  * Generates a List of transactions view of Transaction Tree by doing Depth
  * First Traversal on the tree structure
+ * 
+ * Mahout code, slightly memory efficient than mine
+ * 
  */
 final class TransactionTreeIterator2 extends
 		AbstractIterator<Pair<List<Long>, Long>> {

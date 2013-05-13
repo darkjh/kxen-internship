@@ -79,9 +79,13 @@ public class ParallelProjection {
 			int minSupport,
 			int numGroup,
 			int startFrom) throws IOException, InterruptedException, ClassNotFoundException {
+		// set-up common conf. for all jobs
 		Configuration conf = new Configuration();
 		conf.set(MIN_SUPPORT, Integer.toString(minSupport)); 
 		conf.set(NUM_GROUP, Integer.toString(numGroup));
+		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.GzipCodec");
+//	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.GzipCodec");	
+		
 		Stopwatch sw = new Stopwatch();
 		Stopwatch swAll = new Stopwatch();
 		
@@ -124,16 +128,20 @@ public class ParallelProjection {
 			sw.stop();
 			log.info("Parallel projection finished, took {} ms ...", sw.elapsed(TimeUnit.MILLISECONDS));
 		}
-		
+
+		/*
+		 * not used for the moment
+
 		// step4, aggregation
 		// aggregate partial projection results
-//		if (startFrom <= 5) {
-//			sw.reset().start();
-//			String partialResults = tmp+"/"+PARALLEL_PROJECTION;
-//			startParallelAggregation(partialResults, output, conf); 
-//			sw.stop();
-//			log.info("Parallel aggregation finished, took {} ms ...,", sw.elapsed(TimeUnit.MILLISECONDS));
-//		}
+		if (startFrom <= 5) {
+			sw.reset().start();
+			String partialResults = tmp+"/"+PARALLEL_PROJECTION;
+			startParallelAggregation(partialResults, output, conf); 
+			sw.stop();
+			log.info("Parallel aggregation finished, took {} ms ...,", sw.elapsed(TimeUnit.MILLISECONDS));
+		}
+		*/
 		
 		swAll.stop();
 		log.info("All finished, took {} ms ...", swAll.elapsed(TimeUnit.MILLISECONDS));
@@ -161,7 +169,8 @@ public class ParallelProjection {
 		job.setJarByClass(ParallelProjection.class);
 		
 		int numReduce = Integer.parseInt(conf.get(NUM_GROUP));
-		job.setNumReduceTasks(Math.min(numReduce, REDUCE_SLOT));
+		// job.setNumReduceTasks(Math.min(numReduce, REDUCE_SLOT));
+		job.setNumReduceTasks(numReduce);
 		
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));
@@ -273,18 +282,20 @@ public class ParallelProjection {
 		conf.set("mapred.output.compress", "false");
 	    conf.set("mapred.output.compression.type", "BLOCK");
 	    conf.set("dfs.replication", "1");						// replication 1 for results
+	    conf.set("mapred.reduce.slowstart.completed.maps", "1.00");
 	    // TODO use task memory monitoring
-	    conf.set("mapred.child.java.opts", "-Xmx2g");
-	    conf.set("mapred.job.reuse.jvm.num.tasks", "-1");		// reducer reuse
-	    conf.set("io.sort.mb", "500");							// less spills
-	    // TODO try other codecs, like snappy
-	    conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.GzipCodec");
-	    
+	    conf.set("mapred.child.java.opts", "-Xmx5g");
+	    // TODO jvm reuse seems a bad idea here
+	    // jvm used for mapper still exist in reduce phase, occupy memory and do nothing
+	    // conf.set("mapred.job.reuse.jvm.num.tasks", "10");		// reuse
+	    conf.set("io.sort.factor", "30");
+	    conf.set("io.sort.mb", "300");							// less spills
+
 	    Job job = new Job(conf, "Parallel projection with input: " + input);
 		job.setJarByClass(ParallelProjection.class);
 		
 		int numReduce = Integer.parseInt(conf.get(NUM_GROUP));
-		job.setNumReduceTasks(numReduce);
+		job.setNumReduceTasks(12);
 		
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));
@@ -295,20 +306,21 @@ public class ParallelProjection {
 	    
 	    FileOutputFormat.setOutputPath(job, out);
 	    job.setInputFormatClass(SequenceFileInputFormat.class);
-	    job.setOutputFormatClass(SequenceFileOutputFormat.class);
-	    // job.setOutputFormatClass(TextOutputFormat.class);
+	    // job.setOutputFormatClass(SequenceFileOutputFormat.class);
+	    job.setOutputFormatClass(TextOutputFormat.class);
 	    
-//	    job.setMapOutputKeyClass(IntWritable.class);
-//	    job.setMapOutputValueClass(TransactionTree.class);
-//	    job.setOutputKeyClass(NullWritable.class);
-//	    job.setOutputValueClass(Text.class);
+	    job.setMapOutputKeyClass(IntWritable.class);
+	    job.setMapOutputValueClass(TransactionTree.class);
+	    job.setOutputKeyClass(NullWritable.class);
+	    job.setOutputValueClass(Text.class);
 	    
-	    job.setOutputKeyClass(IntWritable.class);
-	    job.setOutputValueClass(TransactionTree.class);
+	    // for inspecting mapper output size
+//	    job.setOutputKeyClass(IntWritable.class);
+//	    job.setOutputValueClass(TransactionTree.class);
 	    
 	    job.setMapperClass(ParallelProjectionMapper.class);
 	    // job.setCombinerClass(ParallelProjectionCombiner.class);
-	    // job.setReducerClass(ParallelProjectionReducer.class);
+	    job.setReducerClass(ParallelProjectionReducer.class);
 	    
 	    if (!job.waitForCompletion(false)) {
 	    	throw new IllegalStateException("Job failed ...");
