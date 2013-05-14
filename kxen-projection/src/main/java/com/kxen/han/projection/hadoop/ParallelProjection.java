@@ -83,8 +83,8 @@ public class ParallelProjection {
 		Configuration conf = new Configuration();
 		conf.set(MIN_SUPPORT, Integer.toString(minSupport)); 
 		conf.set(NUM_GROUP, Integer.toString(numGroup));
-		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.GzipCodec");
-//	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.GzipCodec");	
+		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.SnappyCodec");
+	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");	
 		
 		Stopwatch sw = new Stopwatch();
 		Stopwatch swAll = new Stopwatch();
@@ -170,7 +170,7 @@ public class ParallelProjection {
 		
 		int numReduce = Integer.parseInt(conf.get(NUM_GROUP));
 		// job.setNumReduceTasks(Math.min(numReduce, REDUCE_SLOT));
-		job.setNumReduceTasks(numReduce);
+		job.setNumReduceTasks(500);
 		
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));
@@ -281,21 +281,32 @@ public class ParallelProjection {
 		conf.set("mapred.compress.map.output", "true");
 		conf.set("mapred.output.compress", "false");
 	    conf.set("mapred.output.compression.type", "BLOCK");
-	    conf.set("dfs.replication", "1");						// replication 1 for results
+	    
+	    // result is big, so set replication to 1
+	    conf.set("dfs.replication", "1");
+	    // memeory issue, can't affort to have reduce and maps run in parallel
 	    conf.set("mapred.reduce.slowstart.completed.maps", "1.00");
 	    // TODO use task memory monitoring
-	    conf.set("mapred.child.java.opts", "-Xmx5g");
-	    // TODO jvm reuse seems a bad idea here
+	    conf.set("mapred.child.java.opts", "-Xmx4g");
+	    
+	    // TODO jvm reuse seems a bad idea for this job
 	    // jvm used for mapper still exist in reduce phase, occupy memory and do nothing
-	    // conf.set("mapred.job.reuse.jvm.num.tasks", "10");		// reuse
+	    conf.set("mapred.job.reuse.jvm.num.tasks", "1");
+	    
+	    // use more memory for shuffling, less disk spills
 	    conf.set("io.sort.factor", "30");
-	    conf.set("io.sort.mb", "300");							// less spills
-
+	    conf.set("io.sort.mb", "300");
+	    
+	    // for write heavy jobs, no socket timeout
+	    // bug in hadoop 1.0.2, need to set a large number, 0 not working
+	    conf.set("dfs.socket.timeout", "99999999");
+	    conf.set("dfs.datanode.socket.write.timeout", "99999999");
+	    
 	    Job job = new Job(conf, "Parallel projection with input: " + input);
 		job.setJarByClass(ParallelProjection.class);
 		
 		int numReduce = Integer.parseInt(conf.get(NUM_GROUP));
-		job.setNumReduceTasks(12);
+		job.setNumReduceTasks(16);
 		
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));
