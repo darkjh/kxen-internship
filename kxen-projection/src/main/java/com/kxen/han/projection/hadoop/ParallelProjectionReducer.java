@@ -61,7 +61,6 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 		fpt.clean();
 		log.info("FP-Tree construction finished, created {} nodes ...", cc);
 
-		// Map<Integer, List<Pair<Integer, Long>>> results = Maps.newTreeMap();
 		group = key.get();
 
 		// projection
@@ -104,23 +103,15 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 						k = other;
 						v = item;
 					}
-//					if (!results.containsKey(k))
-//						results.put(k, new ArrayList<Pair<Integer, Long>>());
-//					results.get(k).add(Pair.of(v, pairSupport));
 					StringBuilder out = new StringBuilder();
 					out.append(k); out.append("\t");
 					out.append(v); out.append("\t");
 					out.append(pairSupport);
-					// String out = k+"\t"+v+"\t"+pairSupport;
 					context.write(NullWritable.get(), new Text(out.toString()));
 				}
 			}
 		}
-//		fpt = null;
-//		log.info("Projection finished, output ...");
-//		for (Integer item : results.keySet()) {
-//			context.write(new IntWritable(item), new GraphLinksWritable(item,
-//					results.get(item)));
-//		}
+		fpt = null;
+		log.info("Projection finished ...");
 	}
 }
