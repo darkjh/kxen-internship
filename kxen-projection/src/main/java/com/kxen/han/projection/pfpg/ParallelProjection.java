@@ -294,13 +294,16 @@ public class ParallelProjection {
 	    conf.set("mapred.job.reuse.jvm.num.tasks", "1");
 	    
 	    // use more memory for shuffling, less disk spills
-	    conf.set("io.sort.factor", "30");
-	    conf.set("io.sort.mb", "300");
+	    conf.set("io.sort.factor", "50");
+	    conf.set("io.sort.mb", "500");
 	    
 	    // for write heavy jobs, no socket timeout
 	    // bug in hadoop 1.0.2, need to set a large number, 0 not working
 	    conf.set("dfs.socket.timeout", "99999999");
 	    conf.set("dfs.datanode.socket.write.timeout", "99999999");
+	    
+	    // reduce side shuffle can use more memory
+	    conf.set("mapred.job.shuffle.input.buffer.percent", "0.90");
 	    
 	    Job job = new Job(conf, "Parallel projection with input: " + input);
 		job.setJarByClass(ParallelProjection.class);

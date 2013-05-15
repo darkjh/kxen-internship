@@ -69,8 +69,8 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 		for (int item : headerTableItems) {
 			// only project for items in the current group
 			// avoid lots of redundancy
-			// if (ParallelProjectionMapper.getGroupByMaxPerGroup(item, maxPerGroup) != group)
-			if (ParallelProjectionMapper.getGroup(item, numGroup) != group)
+			if (ParallelProjectionMapper.getGroupByMaxPerGroup(item, maxPerGroup) != group)
+			// if (ParallelProjectionMapper.getGroup(item, numGroup) != group)
 				continue;
 			if (++cc % 1000 == 0)
 				log.info("Projected for {} items", cc);

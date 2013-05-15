@@ -14,7 +14,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Lists;
@@ -89,8 +88,8 @@ extends Mapper<LongWritable, TransactionWritable, IntWritable, TransactionTree> 
 		// generate and output group-dependent transaction
 		// go through list in reverse order
 		for (int i = items.size()-1; i >= 0 && processed.size() < numGroup; i--) {
-			// int group = getGroupByMaxPerGroup(items.get(i), maxPerGroup);
-			int group = getGroup(items.get(i), numGroup);
+			int group = getGroupByMaxPerGroup(items.get(i), maxPerGroup);
+//			int group = getGroup(items.get(i), numGroup);
 			if (!processed.contains(group)) {
 				processed.add(group);
 				List<Long> subTransac = items.subList(0, i+1); // include
