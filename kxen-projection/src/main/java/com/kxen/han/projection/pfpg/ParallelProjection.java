@@ -1,4 +1,4 @@
-package com.kxen.han.projection.hadoop;
+package com.kxen.han.projection.pfpg;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;

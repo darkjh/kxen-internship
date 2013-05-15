@@ -9,6 +9,8 @@ import org.apache.hadoop.mrunit.mapreduce.ReduceDriver;
 import org.junit.Test;
 
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
+import com.kxen.han.projection.pfpg.ParallelCountingMapper;
+import com.kxen.han.projection.pfpg.ParallelCountingReducer;
 
 public class ParallelCountingMapperReducerTest {
 	

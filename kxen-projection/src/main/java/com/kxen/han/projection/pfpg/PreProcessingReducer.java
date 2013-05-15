@@ -1,4 +1,4 @@
-package com.kxen.han.projection.hadoop;
+package com.kxen.han.projection.pfpg;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -12,7 +12,7 @@ import com.google.common.collect.Sets;
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 /**
- * {@link com.kxen.han.projection.hadoop.PreProcessingMapper}
+ * {@link com.kxen.han.projection.pfpg.PreProcessingMapper}
  * 
  * @author Han JU
  *
