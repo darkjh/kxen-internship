@@ -15,6 +15,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -31,6 +33,11 @@ import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 public class ParallelProjectionMapper 
 extends Mapper<LongWritable, TransactionWritable, IntWritable, TransactionTree> {
 	
+	private static final Logger log = 
+			LoggerFactory.getLogger(ParallelProjectionMapper.class);
+	
+	private int groupCount = 0;
+	private long lenCount = 0;
 	private int numGroup;
 	private int maxPerGroup;
 	private Map<Long, Long> freq;
@@ -46,12 +53,12 @@ extends Mapper<LongWritable, TransactionWritable, IntWritable, TransactionTree> 
 		}
 	};
 	
-	public static int getGroupByMaxPerGroup(long item, int maxPerGroup) {
-		return (int) (item / maxPerGroup);
+	public static int getGroupByMaxPerGroup(int item, int maxPerGroup) {
+		return item / maxPerGroup;
 	}
 	
-	public static int getGroup(long item, int numGroup) {
-		return (int) (item % numGroup);
+	public static int getGroup(int item, int numGroup) {
+		return item % numGroup;
 	}
 	
 	@Override
@@ -87,14 +94,24 @@ extends Mapper<LongWritable, TransactionWritable, IntWritable, TransactionTree> 
 		Set<Integer> processed = Sets.newHashSet();
 		// generate and output group-dependent transaction
 		// go through list in reverse order
-		for (int i = items.size()-1; i >= 0 && processed.size() < numGroup; i--) {
-			int group = getGroupByMaxPerGroup(items.get(i), maxPerGroup);
-//			int group = getGroup(items.get(i), numGroup);
+		for (int i = items.size()-1; i >= 0 && processed.size() <= numGroup; i--) {
+//			int group = getGroupByMaxPerGroup(items.get(i).intValue(), maxPerGroup);
+			int group = getGroup(items.get(i).intValue(), numGroup);
 			if (!processed.contains(group)) {
 				processed.add(group);
 				List<Long> subTransac = items.subList(0, i+1); // include
 				context.write(new IntWritable(group), new TransactionTree(subTransac, 1l));
+				groupCount++;
+				lenCount += subTransac.size();
 			}
 		}
+		log.info("Generated {} groups ...", processed.size());
+	}
+	
+	@Override
+	public void cleanup(Context context) throws IOException, InterruptedException {
+		log.info("Generated {} group-dependent transactions ...", groupCount);
+		log.info("Generated {} group-dependent transactions ...", lenCount);
+		super.cleanup(context);
 	}
 }

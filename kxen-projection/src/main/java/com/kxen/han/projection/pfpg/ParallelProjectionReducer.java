@@ -69,9 +69,10 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 		for (int item : headerTableItems) {
 			// only project for items in the current group
 			// avoid lots of redundancy
-			if (ParallelProjectionMapper.getGroupByMaxPerGroup(item, maxPerGroup) != group)
-			// if (ParallelProjectionMapper.getGroup(item, numGroup) != group)
+//			if (ParallelProjectionMapper.getGroupByMaxPerGroup(item, maxPerGroup) != group) {
+			if (ParallelProjectionMapper.getGroup(item, numGroup) != group) {
 				continue;
+			}
 			if (++cc % 1000 == 0)
 				log.info("Projected for {} items", cc);
 			Map<Integer, Long> counter = Maps.newHashMap();
@@ -90,7 +91,11 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 				}
 				nextNode = fpt.getNext(nextNode);
 			}
-
+			
+			// object reuse
+			StringBuilder out = new StringBuilder();
+			Text outText = new Text();
+			
 			// generate pairs
 			for (Integer other : counter.keySet()) {
 				long pairSupport = counter.get(other);
@@ -103,11 +108,12 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 						k = other;
 						v = item;
 					}
-					StringBuilder out = new StringBuilder();
-					out.append(k); out.append("\t");
-					out.append(v); out.append("\t");
+					out.setLength(0);	// reset string builder
+					out.append(k).append("\t");
+					out.append(v).append("\t");
 					out.append(pairSupport);
-					context.write(NullWritable.get(), new Text(out.toString()));
+					outText.set(out.toString());
+					context.write(NullWritable.get(), outText);
 				}
 			}
 		}

@@ -83,8 +83,8 @@ public class ParallelProjection {
 		Configuration conf = new Configuration();
 		conf.set(MIN_SUPPORT, Integer.toString(minSupport)); 
 		conf.set(NUM_GROUP, Integer.toString(numGroup));
-		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.SnappyCodec");
-	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");	
+//		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.SnappyCodec");
+//	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");	
 		
 		Stopwatch sw = new Stopwatch();
 		Stopwatch swAll = new Stopwatch();
