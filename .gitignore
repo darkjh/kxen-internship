@@ -10,3 +10,8 @@
 .project
 .settings/
 target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
