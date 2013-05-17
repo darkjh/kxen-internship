@@ -47,7 +47,7 @@ extends TextEdgeInputFormat<LongWritable, LongWritable> {
 
 		@Override
 		protected LongWritable getValue(Long[] line) throws IOException {
-			return new LongWritable(0);		// nothing for the link
-		}	
+			return new LongWritable(-1);		// nothing for the link
+		}
 	}
 }

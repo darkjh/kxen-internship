@@ -10,34 +10,33 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-public class ProjectedGraphOutputFormat
-extends TextVertexOutputFormat<LongWritable, NullWritable, LongWritable> {
+public class ProjectedGraphOutputFormat extends
+		TextVertexOutputFormat<LongWritable, NullWritable, LongWritable> {
 
 	private static final String SEP = "\t";
-	private static final String SEP_ITEM = " ";
-	
+	private static final String SEP_TRIPLE = "\n";
+
 	@Override
-	public TextVertexWriter createVertexWriter(
-			TaskAttemptContext context) throws IOException,
-			InterruptedException {
-		return null;
+	public TextVertexWriter createVertexWriter(TaskAttemptContext context)
+			throws IOException, InterruptedException {
+		return new ProjectedGraphVertexWriter();
 	}
-	
-	class ProjectedGraphVertexWriter
-	extends TextVertexWriterToEachLine {
+
+	class ProjectedGraphVertexWriter extends TextVertexWriterToEachLine {
 		@Override
 		protected Text convertVertexToLine(
 				Vertex<LongWritable, NullWritable, LongWritable, ?> vertex)
 				throws IOException {
 			Text out = new Text();
-			if (vertex.getNumEdges() != 0) { // only item nodes
-				StringBuilder sb = new StringBuilder(vertex.getId().toString());
-				sb.append(SEP);
-				for (Edge<LongWritable,LongWritable> edge : vertex.getEdges()) {
-					sb.append(edge.getTargetVertexId().toString());
-					sb.append(SEP_ITEM);
-				}
-				sb.deleteCharAt(sb.length()-1); // delete last space
+			String self = vertex.getId().toString();
+			StringBuilder sb = new StringBuilder();
+			for (Edge<LongWritable, LongWritable> edge : vertex.getEdges()) {
+				sb.append(self).append(SEP);
+				sb.append(edge.getTargetVertexId().toString()).append(SEP);
+				sb.append(edge.getValue().toString()).append(SEP_TRIPLE);
+			}
+			if (sb.length() > 0) {
+				sb.deleteCharAt(sb.length() - 1); // delete the last \n
 				out.set(sb.toString());
 			}
 			return out;
