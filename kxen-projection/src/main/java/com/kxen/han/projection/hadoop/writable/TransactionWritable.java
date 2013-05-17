@@ -46,6 +46,10 @@ public class TransactionWritable implements Writable, Iterable<Long> {
 		}
 	}
 	
+	public int size() {
+		return size;
+	}
+	
 	@Override
 	public void readFields(DataInput in) throws IOException {
 		size = in.readInt();
