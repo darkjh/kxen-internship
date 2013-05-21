@@ -1,20 +1,17 @@
 package com.kxen.han.projection.fpg;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.mahout.cf.taste.impl.common.LongPrimitiveIterator;
-import org.apache.mahout.cf.taste.impl.model.GenericBooleanPrefDataModel;
-import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
-import org.apache.mahout.cf.taste.model.DataModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.carrotsearch.hppc.IntLongOpenHashMap;
+import com.carrotsearch.hppc.IntObjectMap;
+import com.carrotsearch.hppc.IntObjectOpenHashMap;
+import com.carrotsearch.hppc.LongIntOpenHashMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 
 /**
  * A FP-Tree implementation
@@ -27,60 +24,22 @@ import com.google.common.collect.Ordering;
 public class FPTree {
 	
 	private static final Logger log = LoggerFactory.getLogger(FPTree.class);
-	
-	private DataModel dataModel;
-	private int supportThreshold;
-	
+
 	private FPTreeNode root;
-	private Map<Integer, FPTreeNode[]> headerTable;
-	private Map<Long, Integer> freq;
+	private IntObjectOpenHashMap<FPTreeNode[]> headerTable;
 	
-	private Ordering<Long> byDescFrequencyOrdering = new Ordering<Long>() {
-		// reversed order! 
-		// Array.sort() returns descending ordering
-		// TODO bug??
-		@Override
-		public int compare(Long left, Long right) {
-			int freqComp = freq.get(right) - freq.get(left);
-			// fixed order !!!
-			return freqComp != 0 ? freqComp : (int) (right - left);
-		}
-	};
 	
-	public FPTree(String filepath, int threshold) throws Exception {
-		this(new File(filepath), threshold);
-	}
-	
-	public FPTree(String filepath, boolean transpose, int threshold) throws Exception {
-		this(new File(filepath), transpose, threshold);
-	}
-	
-	public FPTree(File file, int threshold) throws Exception {
-		this(new GenericBooleanPrefDataModel(
-				GenericBooleanPrefDataModel.toDataMap(new FileDataModel(file))),
-				threshold);
-	}
-	
-	public FPTree(File file, boolean transpose, int threshold) throws Exception {
-		this(new GenericBooleanPrefDataModel(
-				GenericBooleanPrefDataModel.toDataMap(
-						new FileDataModel(file, transpose, Long.MAX_VALUE))),
-				threshold);
-	}
-	
-	public FPTree(DataModel model, int threshold) throws Exception {
-		dataModel = model;
-		supportThreshold = threshold;
-		
+	public FPTree(IntLongOpenHashMap freq) 
+			throws Exception {
 		root = new FPTreeNode();
-		headerTable = Maps.newHashMap();
+		headerTable = IntObjectOpenHashMap.newInstance();
 		
 		firstScan();
 		constructTree();
 		clean();
 	}
 	
-	public Map<Integer, FPTreeNode[]> getHeaderTable() {
+	public IntObjectMap<FPTreeNode[]> getHeaderTable() {
 		return headerTable;
 	}
 
@@ -89,14 +48,14 @@ public class FPTree {
 	 * in descending order of their frequency
 	 */
 	public void firstScan() throws Exception {
-		freq = Maps.newHashMap();
+		freq = LongIntOpenHashMap.newInstance();
 		
 		LongPrimitiveIterator itemIter = dataModel.getItemIDs();
 		while(itemIter.hasNext()) {
 			long itemID = itemIter.next();
 			int count = dataModel.getNumUsersWithPreferenceFor(itemID);
 			
-			if (count >= supportThreshold) {
+			if (count >= minSupport) {
 				freq.put(itemID, count);
 				headerTable.put((int) itemID, new FPTreeNode[]{null, null});				
 			}
@@ -133,6 +92,10 @@ public class FPTree {
 		log.info("Created {} tree nodes ...", FPTreeNode.nodeCount);
 	}
 	
+	public void insertTransac(Iterable<Long> transac, int support) {
+		
+	}
+	
 	/**
 	 * Take a list of items of form [p|P] and a tree node t, recursively add p 
 	 * (the header of the list) in the subtree of which t is the root
@@ -142,8 +105,14 @@ public class FPTree {
 	 */
 	private void insertTree(List<Long> sorted, FPTreeNode curr) {
 		if (!sorted.isEmpty()) {
-			Integer item = sorted.get(0).intValue();
-			FPTreeNode[] headerList = headerTable.get(item);
+			int item = sorted.get(0).intValue();
+			FPTreeNode[] headerList;
+			if (headerTable.containsKey(item)) {
+				headerList = headerTable.lget();
+			} else {
+				headerList = new FPTreeNode[]{null, null};
+				headerTable.put(item, headerList);
+			}
 			FPTreeNode next = curr.addChild(item, headerList);
 			insertTree(sorted.subList(1, sorted.size()), next);
 		}
@@ -153,17 +122,6 @@ public class FPTree {
 	private void clean() {
 		freq = null;
 		dataModel = null;
-	}
-	
-	public static void main(String[] args) throws Exception {
-		// String file = "/home/port/datasets/msd-small/test_triples";
-		String file = "src/main/resources/test_triples";
-		// String file = "./resources/TestExampleAutoGen";
-		Runtime rt = Runtime.getRuntime();
-
-		FPTree fpt = new FPTree(file, 2);
-
-		rt.gc();
-		Thread.sleep(20000);
+		FPTreeNode.children = null;
 	}
 }

@@ -1,9 +1,9 @@
 package com.kxen.han.projection.fpg;
 
 import java.util.List;
-import java.util.Map;
 
-import com.google.common.collect.Maps;
+import com.carrotsearch.hppc.ObjectObjectOpenHashMap;
+import com.google.common.collect.Lists;
 
 /**
  * FP-Tree node implementation
@@ -16,13 +16,14 @@ import com.google.common.collect.Maps;
 public class FPTreeNode {
 	// keep track of #node created
 	public static long nodeCount;
+	public static ObjectObjectOpenHashMap<FPTreeNode,List<FPTreeNode>> children = 
+			ObjectObjectOpenHashMap.newInstance();
 	
-	private final Integer item;
+	private final int item;
 	private int count;
 
 	private FPTreeNode parent;
 	private FPTreeNode next;
-	private Map<Integer, FPTreeNode> children;
 
 	/** ctor for normal node */
 	public FPTreeNode(long i, int c, FPTreeNode p) {
@@ -36,20 +37,31 @@ public class FPTreeNode {
 		item = -1;
 		count = -1;
 	}
+	
+	private FPTreeNode childSearch(int childItem, List<FPTreeNode> childList) {
+		for (FPTreeNode node : childList) {
+			if (node.getItem() == childItem)
+				return node;
+		}
+		return null;
+	}
 
 	/** add a node as a child, also add to header table */
-	public FPTreeNode addChild(Integer childItem, FPTreeNode[] headerList) { 
-		if (children == null) {
-			children = Maps.newTreeMap();
+	public FPTreeNode addChild(int childItem, FPTreeNode[] headerList) { 
+		List<FPTreeNode> childList;
+		if (children.containsKey(this)) {
+			childList = children.lget();
+		} else {
+			childList = Lists.newArrayList();
+			children.put(this, childList);
 		}
 		
 		FPTreeNode child;
-		if (children.containsKey(childItem)) {
-			child = children.get(childItem);
+		if ((child = childSearch(childItem, childList)) != null) {
 			child.incrementCount();
 		} else {
 			child = new FPTreeNode(childItem, 1, this);
-			children.put(childItem, child);
+			children.get(this).add(child);
 			nodeCount++;
 			
 			if (headerList[0] == null) {
@@ -72,7 +84,7 @@ public class FPTreeNode {
 		return parent;
 	}
 
-	public Integer getItem() {
+	public int getItem() {
 		return item;
 	}
 
