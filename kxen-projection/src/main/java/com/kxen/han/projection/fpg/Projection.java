@@ -24,24 +24,25 @@ import com.google.common.collect.Ordering;
 
 /**
  * Bipartite graph projection solution using a FP-Tree approach
- * 
- * Construct firstly a FP-Tree, then iterate all frequent items (frequent means its 
- * support >= threshold) by ascending frequency order, find and merge its conditional 
+ *
+ * Construct firstly a FP-Tree, then iterate all frequent items (frequent means its
+ * support >= threshold) by ascending frequency order, find and merge its conditional
  * FP-Tree into a single path, then generate all possible frequent pairs
- * 
+ *
  * @author Han JU
  *
  */
 public class Projection {
 	private static final Logger log = LoggerFactory.getLogger(Projection.class);
 	private static final String SEP = "\t";
-	
+
+    private FPTree fpt;
 	private DataModel dataModel;
 	private LongIntMap freq;
 	private int minSupport;
-	
+
 	private Ordering<Long> byDescFrequencyOrdering = new Ordering<Long>() {
-		// reversed order! 
+		// reversed order!
 		// Array.sort() returns descending ordering
 		@Override
 		public int compare(Long left, Long right) {
@@ -50,40 +51,42 @@ public class Projection {
 			return freqComp != 0 ? freqComp : right.compareTo(left);
 		}
 	};
-	
+
 	public Projection(DataModel model, int minSupport) {
 		dataModel = model;
 		this.minSupport = minSupport;
 	}
-	
-	/** 
+
+	/**
 	 * First pass of data, construct L, a list of frequent item
 	 * in descending order of their frequency
 	 */
 	public void firstScan() throws Exception {
 		freq = LongIntOpenHashMap.newInstance();
-		
+
 		LongPrimitiveIterator itemIter = dataModel.getItemIDs();
 		while(itemIter.hasNext()) {
 			long itemID = itemIter.next();
 			int count = dataModel.getNumUsersWithPreferenceFor(itemID);
-			
+
 			if (count >= minSupport) {
 				freq.put(itemID, count);
 			}
 		}
 	}
-	
+
 	/**
 	 * Examine every transaction (or every user's history), sort items in
 	 * descending frequency order and filter out infrequent item. Then add
-	 * this list of items to the FP-tree 
-	 * 
+	 * this list of items to the FP-tree
+	 *
 	 */
 	private void constructTree() throws Exception {
+        fpt = new FPTree();
+
 		LongPrimitiveIterator transIter = dataModel.getUserIDs();
 		long count = 0;
-		
+
 		// for every transaction
 		while (transIter.hasNext()) {
 			if (++count % 5000 == 0)
@@ -98,24 +101,23 @@ public class Projection {
 			}
 			// sort its items in descending frequency order
 			Collections.sort(sortedItems, byDescFrequencyOrdering);
-			insertTree(sortedItems, root);
 		}
 		log.info("Finished constructing FP-Tree ...");
 		log.info("Created {} tree nodes ...", FPTreeNode.nodeCount);
 	}
-	
-	public static void project(String output, int minSupport) 
+
+	public static void project(String output, int minSupport)
 			throws Exception {
 		FPTree fpt = new FPTree(model, minSupport); //Runtime.getRuntime().gc(); Thread.sleep(15000);
 		IntObjectMap<FPTreeNode[]> headerTable = fpt.getHeaderTable();
 		long cc = 0;
-		
+
 		for (IntObjectCursor<FPTreeNode[]> item : headerTable) {
 			if (++cc % 2500 == 0)
 				log.info("Projected for {} items/users ...", cc);
 			HashMap<Integer, Integer> counter = Maps.newHashMap();
 			FPTreeNode list = item.value[0];
-			
+
 			// visit all conditional path of the current item
 			// merge them by counting
 			FPTreeNode node = list;
@@ -130,12 +132,12 @@ public class Projection {
 				}
 				node = node.getNext();
 			}
-			
+
 			// generate pairs
 			for (Integer i : counter.keySet()) {
 				int pairSupport = counter.get(i);
 				if (pairSupport >= minSupport) {
-					String out = item.key < i ? 
+					String out = item.key < i ?
 						item.key + SEP + i.toString()
 							: i.toString() + SEP + item.key;
 					out = out + SEP + Integer.toString(pairSupport);
@@ -146,24 +148,24 @@ public class Projection {
 		ol.close();
 		log.info("Projection finished ...");
 	}
-	
+
 	/**
 	 * Simple projection client
-	 * 
+	 *
 	 * @param args input output minSupport
 	 */
 	public static void main(String[] args) throws Exception {
-		Stopwatch sw = new Stopwatch();	
+		Stopwatch sw = new Stopwatch();
 		sw.start();
 		DataModel dataModel = new GenericBooleanPrefDataModel(
 				GenericBooleanPrefDataModel.toDataMap(new FileDataModel(
 						new File(args[0]))));
-		
-		Projection.project(args[0], OutputLayer.newInstance(args[1]), 
+
+		Projection.project(args[0], OutputLayer.newInstance(args[1]),
 				Integer.parseInt(args[2]));
 		sw.stop();
-		
-		log.info("Projection process finished, used {} ms ...", 
+
+		log.info("Projection process finished, used {} ms ...",
 				sw.elapsed(TimeUnit.MILLISECONDS));
 	}
 }
