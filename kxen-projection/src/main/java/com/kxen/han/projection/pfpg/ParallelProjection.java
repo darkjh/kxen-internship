@@ -334,7 +334,7 @@ public class ParallelProjection {
 	    
 	    job.setMapperClass(ParallelProjectionMapper.class);
 	    // job.setCombinerClass(ParallelProjectionCombiner.class);
-	    job.setReducerClass(ParallelProjectionReducer.class);
+	    job.setReducerClass(ParallelProjectionReducer2.class);
 	    
 	    if (!job.waitForCompletion(false)) {
 	    	throw new IllegalStateException("Job failed ...");

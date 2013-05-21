@@ -111,7 +111,8 @@ extends Mapper<LongWritable, TransactionWritable, IntWritable, TransactionTree> 
 	@Override
 	public void cleanup(Context context) throws IOException, InterruptedException {
 		log.info("Generated {} group-dependent transactions ...", groupCount);
-		log.info("Generated {} group-dependent transactions ...", lenCount);
+		log.info("Average length of group-dependent transactions is {} ...", 
+				lenCount / groupCount);
 		super.cleanup(context);
 	}
 }

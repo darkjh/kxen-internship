@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.carrotsearch.hppc.IntLongMap;
 import com.carrotsearch.hppc.IntLongOpenHashMap;
 import com.carrotsearch.hppc.cursors.IntLongCursor;
-import com.kxen.han.projection.fpg.FPTree;
+import com.kxen.han.projection.fpg2.FPTree;
 import com.kxen.han.projection.hadoop.writable.TransactionTree;
 
 /**
@@ -23,12 +23,12 @@ import com.kxen.han.projection.hadoop.writable.TransactionTree;
  * Output frequent pair (projected graph link) of the group, possible redundancy
  * with other groups' results
  * 
- * This reducer uses the object based FP-Tree
+ * This reducer uses the primitive array based FP-Tree
  * 
  * @author Han JU
  *
  */
-public class ParallelProjectionReducer
+public class ParallelProjectionReducer2
 extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 	
 	private static final Logger log = 
@@ -78,7 +78,8 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 			}
 			if (++cc % 1000 == 0)
 				log.info("Projected for {} items", cc);
-			IntLongMap counter = new IntLongOpenHashMap();
+			// Map<Integer, Long> counter = Maps.newHashMap();
+			IntLongOpenHashMap counter = new IntLongOpenHashMap();
 			int nextNode = fpt.getHeaderNext(item);
 			// chase for same item
 			while (nextNode > 0) {
@@ -99,6 +100,7 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 			StringBuilder out = new StringBuilder();
 			Text outText = new Text();
 			
+			// generate pairs
 			for (IntLongCursor cursor : counter) {
 				long pairSupport = cursor.value;
 				if (pairSupport >= minSupport) {
