@@ -101,14 +101,29 @@ public class Projection {
 			}
 			// sort its items in descending frequency order
 			Collections.sort(sortedItems, byDescFrequencyOrdering);
+			
+			// insert into tree
+			fpt.insertTransac(sortedItems);
 		}
 		log.info("Finished constructing FP-Tree ...");
 		log.info("Created {} tree nodes ...", FPTreeNode.nodeCount);
 	}
+	
+	/** help GC, these are big */
+	private void clean() {
+		freq = null;
+		dataModel = null;
+		fpt.clean();
+	}
 
-	public static void project(String output, int minSupport)
-			throws Exception {
-		FPTree fpt = new FPTree(model, minSupport); //Runtime.getRuntime().gc(); Thread.sleep(15000);
+	public void project(String output) throws Exception {
+		// construct FP-tree
+		firstScan();
+		constructTree();
+		clean();	// Runtime.getRuntime().gc(); Thread.sleep(15000);
+		
+		OutputLayer ol = OutputLayer.newInstance(output);
+		
 		IntObjectMap<FPTreeNode[]> headerTable = fpt.getHeaderTable();
 		long cc = 0;
 
@@ -160,9 +175,10 @@ public class Projection {
 		DataModel dataModel = new GenericBooleanPrefDataModel(
 				GenericBooleanPrefDataModel.toDataMap(new FileDataModel(
 						new File(args[0]))));
-
-		Projection.project(args[0], OutputLayer.newInstance(args[1]),
-				Integer.parseInt(args[2]));
+		
+		Projection proj = new Projection(dataModel, Integer.parseInt(args[2]));
+		
+		proj.project(args[1]);
 		sw.stop();
 
 		log.info("Projection process finished, used {} ms ...",

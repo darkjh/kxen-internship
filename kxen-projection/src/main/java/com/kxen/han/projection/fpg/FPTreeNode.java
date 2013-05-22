@@ -1,9 +1,7 @@
 package com.kxen.han.projection.fpg;
 
-import java.util.List;
-
+import com.carrotsearch.hppc.ObjectArrayList;
 import com.carrotsearch.hppc.ObjectObjectOpenHashMap;
-import com.google.common.collect.Lists;
 
 /**
  * FP-Tree node implementation
@@ -16,8 +14,7 @@ import com.google.common.collect.Lists;
 public class FPTreeNode {
 	// keep track of #node created
 	public static long nodeCount;
-	public static ObjectObjectOpenHashMap<FPTreeNode,List<FPTreeNode>> children = 
-			ObjectObjectOpenHashMap.newInstance();
+	public static ObjectObjectOpenHashMap<FPTreeNode,ObjectArrayList<FPTreeNode>> children;
 	
 	private final int item;
 	private int count;
@@ -38,29 +35,39 @@ public class FPTreeNode {
 		count = -1;
 	}
 	
-	private FPTreeNode childSearch(int childItem, List<FPTreeNode> childList) {
-		for (FPTreeNode node : childList) {
-			if (node.getItem() == childItem)
-				return node;
+	private FPTreeNode childSearch(
+			int childItem, ObjectArrayList<FPTreeNode> childList) {
+		final Object[] buffer = childList.buffer;
+		final int size = childList.size();
+		for (int i = 0; i< size; i++) {
+			FPTreeNode curr = (FPTreeNode)buffer[i];
+			if (childItem == curr.getItem()) {
+				return curr;
+			}
 		}
 		return null;
 	}
+	
+	/** add a node as a child, also add to header table */
+	public FPTreeNode addChild(int childItem, FPTreeNode[] headerList) {
+		return addChild(childItem, 1, headerList);
+	}
 
 	/** add a node as a child, also add to header table */
-	public FPTreeNode addChild(int childItem, FPTreeNode[] headerList) { 
-		List<FPTreeNode> childList;
+	public FPTreeNode addChild(int childItem, int inc, FPTreeNode[] headerList) { 
+		ObjectArrayList<FPTreeNode> childList;
 		if (children.containsKey(this)) {
 			childList = children.lget();
 		} else {
-			childList = Lists.newArrayList();
+			childList = ObjectArrayList.newInstance();
 			children.put(this, childList);
 		}
 		
 		FPTreeNode child;
 		if ((child = childSearch(childItem, childList)) != null) {
-			child.incrementCount();
+			child.incrementCount(inc);
 		} else {
-			child = new FPTreeNode(childItem, 1, this);
+			child = new FPTreeNode(childItem, inc, this);
 			children.get(this).add(child);
 			nodeCount++;
 			
@@ -92,8 +99,8 @@ public class FPTreeNode {
 		return count;
 	}
 	
-	public int incrementCount() {
-		return ++count;
+	public void incrementCount(int inc) {
+		count += inc;
 	}
 	
 	public FPTreeNode getNext() {

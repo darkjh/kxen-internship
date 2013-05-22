@@ -1,17 +1,10 @@
 package com.kxen.han.projection.fpg;
 
-import java.util.Collections;
 import java.util.List;
 
-import org.apache.mahout.cf.taste.impl.common.LongPrimitiveIterator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.carrotsearch.hppc.IntLongOpenHashMap;
 import com.carrotsearch.hppc.IntObjectMap;
 import com.carrotsearch.hppc.IntObjectOpenHashMap;
-import com.carrotsearch.hppc.LongIntOpenHashMap;
-import com.google.common.collect.Lists;
+import com.carrotsearch.hppc.ObjectObjectOpenHashMap;
 
 /**
  * A FP-Tree implementation
@@ -22,20 +15,22 @@ import com.google.common.collect.Lists;
  *
  */
 public class FPTree {
-
-	private static final Logger log = LoggerFactory.getLogger(FPTree.class);
-
 	private FPTreeNode root;
 	private IntObjectOpenHashMap<FPTreeNode[]> headerTable;
-
-
+	
 	public FPTree() {
 		root = new FPTreeNode();
 		headerTable = IntObjectOpenHashMap.newInstance();
+		FPTreeNode.children = ObjectObjectOpenHashMap.newInstance();
+		FPTreeNode.nodeCount = 0l;
 	}
 
 	public IntObjectMap<FPTreeNode[]> getHeaderTable() {
 		return headerTable;
+	}
+	
+	public void insertTransac(Iterable<Long> transac) {
+		insertTransac(transac, 1);
 	}
 
 	public void insertTransac(Iterable<Long> transac, int support) {
@@ -49,7 +44,7 @@ public class FPTree {
                 headerList = new FPTreeNode[]{null, null};
                 headerTable.put(item, headerList);
             }
-            curr = curr.addChild(item, headerList);
+            curr = curr.addChild(item, support, headerList);
         }
 	}
 
@@ -76,7 +71,7 @@ public class FPTree {
 	}
 
 	/** help GC, children information is of no use in projection */
-	private void clean() {
+	public void clean() {
 		FPTreeNode.children = null;
 	}
 }
