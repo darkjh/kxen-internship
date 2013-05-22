@@ -18,6 +18,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.carrotsearch.hppc.IntOpenHashSet;
+import com.carrotsearch.hppc.LongArrayList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -91,7 +93,7 @@ extends Mapper<LongWritable, TransactionWritable, IntWritable, TransactionTree> 
 		}
 		Collections.sort(items, byDescFrequencyOrdering);
 		
-		Set<Integer> processed = Sets.newHashSet();
+		IntOpenHashSet processed = IntOpenHashSet.newInstance();
 		// generate and output group-dependent transaction
 		// go through list in reverse order
 		for (int i = items.size()-1; i >= 0 && processed.size() <= numGroup; i--) {

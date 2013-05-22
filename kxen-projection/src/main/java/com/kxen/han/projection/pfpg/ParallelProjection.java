@@ -72,19 +72,17 @@ public class ParallelProjection {
 	 * @param groupNum		#group that frequent items will be grouped
 	 * @param startFrom		start directly from a step
 	 */
-	public static void runProjection(
-			String input, 
-			String output,
-			String tmp,
-			int minSupport,
-			int numGroup,
-			int startFrom) throws IOException, InterruptedException, ClassNotFoundException {
+	public static void runProjection(Configuration conf) 
+					throws IOException, InterruptedException, ClassNotFoundException {
 		// set-up common conf. for all jobs
-		Configuration conf = new Configuration();
-		conf.set(MIN_SUPPORT, Integer.toString(minSupport)); 
-		conf.set(NUM_GROUP, Integer.toString(numGroup));
-//		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.SnappyCodec");
-//	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");	
+		String input = conf.get(ParallelProjectionDriver.IN);
+		String output = conf.get(ParallelProjectionDriver.OUT);
+		String tmp = conf.get(ParallelProjectionDriver.TMP);
+		int minSupport = conf.getInt(MIN_SUPPORT, 2);
+		int startFrom = conf.getInt(ParallelProjectionDriver.START, 1);
+		
+		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.SnappyCodec");
+	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");
 		
 		Stopwatch sw = new Stopwatch();
 		Stopwatch swAll = new Stopwatch();
@@ -287,7 +285,7 @@ public class ParallelProjection {
 	    // memeory issue, can't affort to have reduce and maps run in parallel
 	    conf.set("mapred.reduce.slowstart.completed.maps", "1.00");
 	    // TODO use task memory monitoring
-	    conf.set("mapred.child.java.opts", "-Xmx4g");
+	    conf.set("mapred.child.java.opts", "-Xmx3200m");
 	    
 	    // TODO jvm reuse seems a bad idea for this job
 	    // jvm used for mapper still exist in reduce phase, occupy memory and do nothing
@@ -308,8 +306,7 @@ public class ParallelProjection {
 	    Job job = new Job(conf, "Parallel projection with input: " + input);
 		job.setJarByClass(ParallelProjection.class);
 		
-		int numReduce = Integer.parseInt(conf.get(NUM_GROUP));
-		job.setNumReduceTasks(16);
+		job.setNumReduceTasks(20);
 		
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));
@@ -334,7 +331,11 @@ public class ParallelProjection {
 	    
 	    job.setMapperClass(ParallelProjectionMapper.class);
 	    // job.setCombinerClass(ParallelProjectionCombiner.class);
-	    job.setReducerClass(ParallelProjectionReducer2.class);
+	    
+	    if (conf.getBoolean(ParallelProjectionDriver.FPG, false)) 
+	    	job.setReducerClass(ParallelProjectionReducer.class);	// FPG
+	    else 
+	    	job.setReducerClass(ParallelProjectionReducer2.class);	// FPG2
 	    
 	    if (!job.waitForCompletion(false)) {
 	    	throw new IllegalStateException("Job failed ...");

@@ -14,8 +14,10 @@ import org.slf4j.LoggerFactory;
 
 import com.carrotsearch.hppc.IntLongMap;
 import com.carrotsearch.hppc.IntLongOpenHashMap;
+import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.carrotsearch.hppc.cursors.IntLongCursor;
 import com.kxen.han.projection.fpg.FPTree;
+import com.kxen.han.projection.fpg.FPTreeNode;
 import com.kxen.han.projection.hadoop.writable.TransactionTree;
 
 /**
@@ -32,7 +34,7 @@ public class ParallelProjectionReducer
 extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 	
 	private static final Logger log = 
-			LoggerFactory.getLogger(ParallelProjectionReducer2.class);
+			LoggerFactory.getLogger(ParallelProjectionReducer.class);
 	
 	private int minSupport;
 	private int group;
@@ -55,21 +57,28 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 		log.info("Reduce started ...");
 		// construct FP-Tree
 		FPTree fpt = new FPTree();
-		long cc = 0;
 		for (TransactionTree tt : values) {
 			for (Pair<List<Long>, Long> transac : tt) {
-				cc += fpt.insertTransac(transac.getLeft(), transac.getRight().intValue());
+				fpt.insertTransac(transac.getLeft(), transac.getRight().intValue());
 			}
 		}
 		fpt.clean();
-		log.info("FP-Tree construction finished, created {} nodes ...", cc);
+		log.info("FP-Tree construction finished, created {} nodes ...", FPTreeNode.nodeCount);
 
 		group = key.get();
 
 		// projection
-		cc = 0;
-		int[] headerTableItems = fpt.getHeaderTableItems();
-		for (int item : headerTableItems) {
+		long cc = 0;
+		IntObjectOpenHashMap<FPTreeNode[]> headerTable = fpt.getHeaderTable();
+		
+		// use faster iterate method
+		final int[] ks = headerTable.keys;
+		final Object[] vs = headerTable.values;
+		final boolean[] states = headerTable.allocated;
+		for (int i = 0; i < states.length; i++) {
+			if (!states[i])	// not allocated
+				continue;
+			int item = ks[i];
 			// only project for items in the current group
 			// avoid lots of redundancy
 //			if (ParallelProjectionMapper.getGroupByMaxPerGroup(item, maxPerGroup) != group) {
@@ -79,35 +88,36 @@ extends Reducer<IntWritable, TransactionTree, NullWritable, Text> {
 			if (++cc % 1000 == 0)
 				log.info("Projected for {} items", cc);
 			IntLongMap counter = new IntLongOpenHashMap();
-			int nextNode = fpt.getHeaderNext(item);
-			// chase for same item
-			while (nextNode > 0) {
-				long condSupport = fpt.count(nextNode);
-				// go upward
-				int curr = fpt.getParent(nextNode);
-				while (!fpt.isRoot(curr)) {
-					int currItem = fpt.getItem(curr);
-					long count = counter.containsKey(currItem) ? counter
-							.get(currItem) : 0;
+			FPTreeNode list = ((FPTreeNode[])vs[i])[0];
+
+			// visit all conditional path of the current item
+			// merge them by counting
+			FPTreeNode node = list;
+			while (node != null) {
+				int condSupport = node.getCount();
+				FPTreeNode curr = node.getParent();
+				while (!curr.isRoot()) {
+					int currItem = curr.getItem();
+					long count = counter.containsKey(currItem) ? counter.get(currItem) : 0l;
 					counter.put(currItem, count + condSupport);
-					curr = fpt.getParent(curr);
+					curr = curr.getParent();
 				}
-				nextNode = fpt.getNext(nextNode);
+				node = node.getNext();
 			}
 			
 			// object reuse
 			StringBuilder out = new StringBuilder();
 			Text outText = new Text();
 			
-			for (IntLongCursor cursor : counter) {
-				long pairSupport = cursor.value;
+			for (IntLongCursor intLongCursor : counter) {
+				long pairSupport = intLongCursor.value;
 				if (pairSupport >= minSupport) {
 					int k, v;
-					if (item < cursor.key) {
+					if (item < intLongCursor.key) {
 						k = item;
-						v = cursor.key;
+						v = intLongCursor.key;
 					} else {
-						k = cursor.key;
+						k = intLongCursor.key;
 						v = item;
 					}
 					out.setLength(0);	// reset string builder

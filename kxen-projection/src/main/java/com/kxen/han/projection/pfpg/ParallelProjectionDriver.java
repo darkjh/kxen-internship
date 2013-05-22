@@ -3,9 +3,8 @@ package com.kxen.han.projection.pfpg;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -18,32 +17,26 @@ import org.apache.hadoop.util.ToolRunner;
  *
  */
 public class ParallelProjectionDriver extends Configured implements Tool {
-		
-	static private final String IN = "input";
-	static private final String OUT = "output";
-	static private final String TMP = "tempDir";
-	static private final String GROUP = "numGroup";
-	static private final String SUPP = "minSupport";
-	static private final String START = "startFrom";
 	
-	private static Options initOptions() {
-		Options ops = new Options();
-		
-		Option inputPath = OptionBuilder.withArgName("input").hasArg().create(IN);
-		Option outputPath = OptionBuilder.withArgName("output").hasArg().create(OUT);
-		Option numGroup = OptionBuilder.withArgName("Group").hasArg().create(GROUP);
-		Option tmpPath = OptionBuilder.withArgName("temp").hasArg().create(TMP);
-		Option minSupport = OptionBuilder.withArgName("minSupport").hasArg().create(SUPP);
-		Option startFrom = OptionBuilder.withArgName("start").hasArg().create(START);
-		
-		ops.addOption(inputPath);
-		ops.addOption(outputPath);
-		ops.addOption(numGroup);
-		ops.addOption(tmpPath);
-		ops.addOption(minSupport);
-		ops.addOption(startFrom);
-		
-		return ops;
+	static public final String IN = "i";
+	static public final String OUT = "o";
+	static public final String TMP = "tmp";
+	static public final String GROUP = "g";
+	static public final String SUPP = "s";
+	static public final String START = "startFrom";
+	static public final String FPG = "useObjectFPG";
+	
+	private static Options OPTIONS;
+	
+	static {
+		OPTIONS = new Options();
+		OPTIONS.addOption(IN, "input", true, "Input Path");
+		OPTIONS.addOption(OUT, "output", true, "Output Path");
+		OPTIONS.addOption(TMP, "tempDir", true, "Temp Directory");
+		OPTIONS.addOption(GROUP, "numGroup", true, "Number of Groups");
+		OPTIONS.addOption(SUPP, "minSupport", true, "Minimum Support Threshold");
+		OPTIONS.addOption(START, true, "Input Path");
+		OPTIONS.addOption(FPG, false, "Input Path");
 	}
 
 	/**
@@ -51,16 +44,18 @@ public class ParallelProjectionDriver extends Configured implements Tool {
 	 */
 	public int run(String[] arg0) throws Exception {
 		CommandLineParser parser = new BasicParser();
-		CommandLine cli = parser.parse(initOptions(), arg0);
+		CommandLine cmd = parser.parse(OPTIONS, arg0);
 		
-		String input = cli.getOptionValue(IN);
-		String output = cli.getOptionValue(OUT);
-		String tmp = cli.getOptionValue(TMP);
-		int groupNum = Integer.parseInt(cli.getOptionValue(GROUP));
-		int minSupport = Integer.parseInt(cli.getOptionValue(SUPP, "2"));
-		int startFrom = Integer.parseInt(cli.getOptionValue(START, "1"));
-		ParallelProjection.runProjection(input, output, tmp, 
-				minSupport, groupNum, startFrom);		
+		Configuration conf = new Configuration();
+		
+		conf.set(ParallelProjection.NUM_GROUP, cmd.getOptionValue(GROUP));
+		conf.set(IN, cmd.getOptionValue(IN));
+		conf.set(OUT, cmd.getOptionValue(OUT));
+		conf.set(TMP, cmd.getOptionValue(TMP));
+		conf.set(ParallelProjection.MIN_SUPPORT, cmd.getOptionValue(SUPP, "2"));
+		conf.set(START, cmd.getOptionValue(START, "1"));
+		conf.setBoolean(FPG, cmd.hasOption(FPG));
+		ParallelProjection.runProjection(conf);
 		return 0;
 	}
 	
