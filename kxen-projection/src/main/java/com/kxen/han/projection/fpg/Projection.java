@@ -13,7 +13,7 @@ import org.apache.mahout.cf.taste.model.DataModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.carrotsearch.hppc.IntObjectMap;
+import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.carrotsearch.hppc.LongIntMap;
 import com.carrotsearch.hppc.LongIntOpenHashMap;
 import com.carrotsearch.hppc.cursors.IntObjectCursor;
@@ -124,14 +124,19 @@ public class Projection {
 		
 		OutputLayer ol = OutputLayer.newInstance(output);
 		
-		IntObjectMap<FPTreeNode[]> headerTable = fpt.getHeaderTable();
+		IntObjectOpenHashMap<FPTreeNode[]> headerTable = fpt.getHeaderTable();
+		final int[] ks = headerTable.keys;
+		final Object[] vs = headerTable.values;
+		final boolean[] states = headerTable.allocated;
 		long cc = 0;
 
-		for (IntObjectCursor<FPTreeNode[]> item : headerTable) {
+		for (int i = 0; i < states.length; i++) {
+			if (!states[i])	// not allocated
+				continue;
 			if (++cc % 2500 == 0)
 				log.info("Projected for {} items/users ...", cc);
 			HashMap<Integer, Integer> counter = Maps.newHashMap();
-			FPTreeNode list = item.value[0];
+			FPTreeNode list = ((FPTreeNode[])vs[i])[0];
 
 			// visit all conditional path of the current item
 			// merge them by counting
@@ -149,12 +154,13 @@ public class Projection {
 			}
 
 			// generate pairs
-			for (Integer i : counter.keySet()) {
-				int pairSupport = counter.get(i);
+			int item = ks[i];
+			for (Integer j : counter.keySet()) {
+				int pairSupport = counter.get(j);
 				if (pairSupport >= minSupport) {
-					String out = item.key < i ?
-						item.key + SEP + i.toString()
-							: i.toString() + SEP + item.key;
+					String out = item < j ?
+						item + SEP + j.toString()
+							: j.toString() + SEP + item;
 					out = out + SEP + Integer.toString(pairSupport);
 					ol.writeLine(out);
 				}

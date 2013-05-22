@@ -25,7 +25,7 @@ public class FPTree {
 		FPTreeNode.nodeCount = 0l;
 	}
 
-	public IntObjectMap<FPTreeNode[]> getHeaderTable() {
+	public IntObjectOpenHashMap<FPTreeNode[]> getHeaderTable() {
 		return headerTable;
 	}
 	
