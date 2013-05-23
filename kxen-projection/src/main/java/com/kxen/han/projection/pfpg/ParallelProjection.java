@@ -6,7 +6,12 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -23,6 +28,8 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +47,37 @@ import com.kxen.han.projection.hadoop.writable.TransactionWritable;
  * @author Han JU
  *
  */
-public class ParallelProjection {
+public class ParallelProjection 
+extends Configured implements Tool {
 	
 	private static final Logger log = LoggerFactory.getLogger(ParallelProjection.class);
 	
+	/** cli interface set-up */
+	static public final String IN = "i";
+	static public final String OUT = "o";
+	static public final String TMP = "tmp";
+	static public final String GROUP = "g";
+	static public final String SUPP = "s";
+	static public final String RED = "r";
+	static public final String START = "startFrom";
+	static public final String FPG = "useObjectFPG";
+	
+	private static Options OPTIONS;
+	
+	static {
+		OPTIONS = new Options();
+		OPTIONS.addOption(IN, "input", true, "Input Path");
+		OPTIONS.addOption(OUT, "output", true, "Output Path");
+		OPTIONS.addOption(TMP, "tempDir", true, "Temp Directory");
+		OPTIONS.addOption(GROUP, "numGroup", true, "Number of Groups");
+		OPTIONS.addOption(SUPP, "minSupport", true, "Minimum Support Threshold");
+		OPTIONS.addOption(RED, "numReduce", true, 
+				"Number of reducers per machine for projection");
+		OPTIONS.addOption(START, true, "Input Path");
+		OPTIONS.addOption(FPG, false, "Input Path");
+	}
+	
+	/** constants */
 	public static final String F_LIST = "f-list";
 	public static final String MIN_SUPPORT = "minSupport";
 	public static final String NUM_GROUP = "numGroup";
@@ -55,6 +89,8 @@ public class ParallelProjection {
 	public static final String PARALLEL_AGGREGATION = "parallel-aggregation";
 	
 	public static final int REDUCE_SLOT = 32;
+	public static final int MACHINE = 4;
+	public static final int MEM = 16 * 1024 - 512;	// 512m for system use
 	
 	private ParallelProjection() {}
 	
@@ -63,14 +99,6 @@ public class ParallelProjection {
 	 * 	- parallel counting
 	 * 	- single machine grouping
 	 * 	- parallel FP-Tree projection
-	 * 	- aggregating partial results 
-	 * 
-	 * @param input			input path
-	 * @param output		output path
-	 * @param tmp			temp directory path
-	 * @param minSupport	min. support threshold
-	 * @param groupNum		#group that frequent items will be grouped
-	 * @param startFrom		start directly from a step
 	 */
 	public static void runProjection(Configuration conf) 
 					throws IOException, InterruptedException, ClassNotFoundException {
@@ -80,11 +108,11 @@ public class ParallelProjection {
 		String tmp = conf.get(ParallelProjectionDriver.TMP);
 		int minSupport = conf.getInt(MIN_SUPPORT, 2);
 		int startFrom = conf.getInt(ParallelProjectionDriver.START, 1);
-		
+
 		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.SnappyCodec");
 	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");
 		
-		Stopwatch sw = new Stopwatch();
+	    Stopwatch sw = new Stopwatch();
 		Stopwatch swAll = new Stopwatch();
 		
 		swAll.start();
@@ -284,8 +312,6 @@ public class ParallelProjection {
 	    conf.set("dfs.replication", "1");
 	    // memeory issue, can't affort to have reduce and maps run in parallel
 	    conf.set("mapred.reduce.slowstart.completed.maps", "1.00");
-	    // TODO use task memory monitoring
-	    conf.set("mapred.child.java.opts", "-Xmx3200m");
 	    
 	    // TODO jvm reuse seems a bad idea for this job
 	    // jvm used for mapper still exist in reduce phase, occupy memory and do nothing
@@ -303,11 +329,18 @@ public class ParallelProjection {
 	    // reduce side shuffle can use more memory
 	    conf.set("mapred.job.shuffle.input.buffer.percent", "0.90");
 	    
+		// memory control
+		// TODO use task memory monitoring
+		int numReduce = Integer.parseInt(conf.get(RED));
+		String memArg = "-Xmx" + (MEM / numReduce) + "m";
+		log.info("Memory for each task is {} ...", memArg);
+	    conf.set("mapred.child.java.opts", memArg);
+
 	    Job job = new Job(conf, "Parallel projection with input: " + input);
 		job.setJarByClass(ParallelProjection.class);
 		
-		job.setNumReduceTasks(20);
-		
+		job.setNumReduceTasks(numReduce * MACHINE);
+	    
 	    // setting input and output path
 	    FileInputFormat.addInputPath(job, new Path(input));
 	    Path out = new Path(output, PARALLEL_PROJECTION);
@@ -381,5 +414,30 @@ public class ParallelProjection {
 	    if (!job.waitForCompletion(false)) {
 	    	throw new IllegalStateException("Job failed ...");
 	    }
+	}
+	
+	/**
+	 * Entry point for parallel bipartite graph projection
+	 */
+	public int run(String[] args) throws Exception {
+		CommandLineParser parser = new BasicParser();
+		CommandLine cmd = parser.parse(OPTIONS, args);
+		
+		Configuration conf = new Configuration();
+		
+		conf.set(NUM_GROUP, cmd.getOptionValue(GROUP));
+		conf.set(IN, cmd.getOptionValue(IN));
+		conf.set(OUT, cmd.getOptionValue(OUT));
+		conf.set(TMP, cmd.getOptionValue(TMP));
+		conf.set(MIN_SUPPORT, cmd.getOptionValue(SUPP, "2"));
+		conf.set(START, cmd.getOptionValue(START, "1"));
+		conf.set(RED, cmd.getOptionValue(RED, "4"));
+		conf.setBoolean(FPG, cmd.hasOption(FPG));
+		ParallelProjection.runProjection(conf);
+		return 0;
+	}
+	
+	public static void main(String[] args) throws Exception {
+		ToolRunner.run(new ParallelProjection(), args);
 	}
 }
