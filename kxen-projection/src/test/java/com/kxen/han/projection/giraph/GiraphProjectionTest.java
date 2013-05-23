@@ -37,8 +37,8 @@ public class GiraphProjectionTest extends BspCase {
 		String[] edges = parseInput(new File("src/test/resources/TestExampleAutoGen"));
 
 		GiraphConfiguration conf = new GiraphConfiguration();
-		conf.setInt(ProjectionVertex.MIN_SUPPORT, 3);
-		conf.setVertexClass(ProjectionVertex.class);
+		conf.setInt(ProjectionComputation.MIN_SUPPORT, 3);
+		conf.setComputationClass(ProjectionComputation.class);
 		conf.setOutEdgesClass(ByteArrayEdges.class);
 		conf.setEdgeInputFormatClass(TripleEdgeInputFormat.class);
 		conf.setVertexOutputFormatClass(ProjectedGraphOutputFormat.class);

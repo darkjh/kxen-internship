@@ -1,7 +1,6 @@
 package com.kxen.han.projection.giraph;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.giraph.io.EdgeReader;

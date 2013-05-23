@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.VLongWritable;
@@ -15,31 +16,28 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
-public class ProjectionVertex 
-extends Vertex<VLongWritable,NullWritable,VLongWritable,TransactionWritable> {
+public class ProjectionComputation 
+extends BasicComputation<VLongWritable,TransactionWritable,VLongWritable,TransactionWritable> {
 	
 	public static String MIN_SUPPORT = "minSupport";
 	
-	private List<TransactionWritable> neighborList;
-	private boolean isProdNode;
-	
-	public boolean isProdNode() {
-		return isProdNode;
+	/** by construction a product node has no out edge initially */
+	public boolean isProdNode(Vertex<?,?,?> v) {
+		return v.getNumEdges() == 0;
 	}
 	
 	@Override
-	public void compute(Iterable<TransactionWritable> messages)
+	public void compute(Vertex<VLongWritable, TransactionWritable, VLongWritable> vertex, 
+			Iterable<TransactionWritable> messages)
 			throws IOException {
-		// by construction a product node has no outgoing edge
-		isProdNode = getNumEdges() == 0;
 		// step 0, user node sends its neighbor list
-		if (getSuperstep() == 0 && !isProdNode) {
+		if (getSuperstep() == 0 && !isProdNode(vertex)) {
 			List<Long> neighbors = Lists.newArrayList();
 			
-			for (Edge<VLongWritable,VLongWritable> edge : getEdges()) {
+			for (Edge<VLongWritable,VLongWritable> edge : vertex.getEdges()) {
 				neighbors.add(edge.getTargetVertexId().get());
 			}
-			for (Edge<VLongWritable,VLongWritable> edge : getEdges()) {
+			for (Edge<VLongWritable,VLongWritable> edge : vertex.getEdges()) {
 				Long target = edge.getTargetVertexId().get();
 				List<Long> msg = Lists.newArrayList();
 				for (Long item : neighbors) {
@@ -54,22 +52,22 @@ extends Vertex<VLongWritable,NullWritable,VLongWritable,TransactionWritable> {
 			}
 			
 			// then remove user nodes from the graph
-			removeVertexRequest(getId());
+			removeVertexRequest(vertex.getId());
 			
 			// user nodes stop
-			voteToHalt();
+			vertex.voteToHalt();
 		}
 		
 		// save msgs
 		if (getSuperstep() == 1) {
-			neighborList = Lists.newArrayList();
+			neighbor = Lists.newArrayList();
 			for (TransactionWritable msg : messages) {
 				neighborList.add(new TransactionWritable(msg, msg.size()));
 			}
 		}
 		
 		// calculation
-		if (getSuperstep() >= 1 && getSuperstep()-1 == getId().get()%10) {
+		if (getSuperstep() >= 1 && getSuperstep()-1 == vertex.getId().get()%10) {
 			Map<Long, Long> counter = Maps.newHashMap();
 			for (TransactionWritable transac : neighborList) {
 				for (Long item : transac) {
@@ -86,10 +84,10 @@ extends Vertex<VLongWritable,NullWritable,VLongWritable,TransactionWritable> {
 				if (entry.getValue() >= minSupport) {
 					k.set(entry.getKey());
 					v.set(entry.getValue());
-					addEdge(EdgeFactory.create(k, v));
+					vertex.addEdge(EdgeFactory.create(k, v));
 				}
 			}
-			voteToHalt();
+			vertex.voteToHalt();
 		}
 	}
 }

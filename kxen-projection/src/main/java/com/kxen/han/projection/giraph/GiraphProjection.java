@@ -82,7 +82,7 @@ extends Configured implements Tool {
 		CommandLine cmd = parser.parse(OPTIONS, args);
 		
 		GiraphConfiguration giraphConf = new GiraphConfiguration(getConf());
-		giraphConf.setVertexClass(ProjectionVertex.class);
+		giraphConf.setComputationClass(ProjectionComputation.class);
 		giraphConf.setEdgeInputFormatClass(TripleEdgeInputFormat.class);
 		giraphConf.setVertexOutputFormatClass(ProjectedGraphOutputFormat.class);
 
@@ -92,7 +92,7 @@ extends Configured implements Tool {
 		
 		int worker = Integer.parseInt(cmd.getOptionValue(WORKER));
 		giraphConf.setWorkerConfiguration(worker, worker, 100.0f);
-		giraphConf.set(ProjectionVertex.MIN_SUPPORT, cmd.getOptionValue(SUPP));
+		giraphConf.set(ProjectionComputation.MIN_SUPPORT, cmd.getOptionValue(SUPP));
 		GiraphJob job = new GiraphJob(giraphConf, "GiraphProjection: Projection");
 		GiraphFileInputFormat.addEdgeInputPath(giraphConf, new Path(cmd.getOptionValue(IN)));
 		FileOutputFormat.setOutputPath(job.getInternalJob(), new Path(cmd.getOptionValue(OUT)));
