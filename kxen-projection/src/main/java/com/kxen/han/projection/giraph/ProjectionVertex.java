@@ -8,36 +8,38 @@ import java.util.Map.Entry;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.VLongWritable;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.kxen.han.projection.hadoop.writable.TransactionWritable;
 
 public class ProjectionVertex 
-extends Vertex<LongWritable,NullWritable,LongWritable,TransactionWritable> {
+extends Vertex<VLongWritable,NullWritable,VLongWritable,TransactionWritable> {
 	
 	public static String MIN_SUPPORT = "minSupport";
 	
 	private List<TransactionWritable> neighborList;
+	private boolean isProdNode;
 	
-	/** by construction a product node has no outgoing edge */
 	public boolean isProdNode() {
-		return this.getNumEdges() == 0;
+		return isProdNode;
 	}
 	
 	@Override
 	public void compute(Iterable<TransactionWritable> messages)
 			throws IOException {
+		// by construction a product node has no outgoing edge
+		isProdNode = getNumEdges() == 0;
 		// step 0, user node sends its neighbor list
-		if (getSuperstep() == 0 && !isProdNode()) {
+		if (getSuperstep() == 0 && !isProdNode) {
 			List<Long> neighbors = Lists.newArrayList();
 			
-			for (Edge<LongWritable,LongWritable> edge : getEdges()) {
+			for (Edge<VLongWritable,VLongWritable> edge : getEdges()) {
 				neighbors.add(edge.getTargetVertexId().get());
 			}
-			for (Edge<LongWritable,LongWritable> edge : getEdges()) {
+			for (Edge<VLongWritable,VLongWritable> edge : getEdges()) {
 				Long target = edge.getTargetVertexId().get();
 				List<Long> msg = Lists.newArrayList();
 				for (Long item : neighbors) {
@@ -77,8 +79,8 @@ extends Vertex<LongWritable,NullWritable,LongWritable,TransactionWritable> {
 				}
 			}
 			neighborList = null;
-			LongWritable k = new LongWritable();
-			LongWritable v = new LongWritable();
+			VLongWritable k = new VLongWritable();
+			VLongWritable v = new VLongWritable();
 			int minSupport = getConf().getInt(MIN_SUPPORT, 2);
 			for (Entry<Long, Long> entry : counter.entrySet()) {
 				if (entry.getValue() >= minSupport) {

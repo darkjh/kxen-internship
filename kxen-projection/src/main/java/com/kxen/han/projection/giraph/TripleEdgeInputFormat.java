@@ -1,22 +1,23 @@
 package com.kxen.han.projection.giraph;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.io.formats.TextEdgeInputFormat;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 public class TripleEdgeInputFormat
-extends TextEdgeInputFormat<LongWritable, LongWritable> {
+extends TextEdgeInputFormat<VLongWritable, VLongWritable> {
 	
 	private static final Pattern SEP = Pattern.compile("\t");
 	
 	@Override
-	public EdgeReader<LongWritable, LongWritable> createEdgeReader(
+	public EdgeReader<VLongWritable, VLongWritable> createEdgeReader(
 			InputSplit split, TaskAttemptContext context) throws IOException {
 		return new TripleEdgeReader();
 	}
@@ -34,20 +35,20 @@ extends TextEdgeInputFormat<LongWritable, LongWritable> {
 		}
 
 		@Override
-		protected LongWritable getTargetVertexId(Long[] pair)
+		protected VLongWritable getTargetVertexId(Long[] pair)
 				throws IOException {
-			return new LongWritable(pair[1]);
+			return new VLongWritable(pair[1]);
 		}
 
 		@Override
-		protected LongWritable getSourceVertexId(Long[] pair)
+		protected VLongWritable getSourceVertexId(Long[] pair)
 				throws IOException {
-			return new LongWritable(pair[0]);
+			return new VLongWritable(pair[0]);
 		}
 
 		@Override
-		protected LongWritable getValue(Long[] line) throws IOException {
-			return new LongWritable(-1);		// nothing for the link
+		protected VLongWritable getValue(Long[] line) throws IOException {
+			return new VLongWritable(-1);		// nothing for the link
 		}
 	}
 }

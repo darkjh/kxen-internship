@@ -5,13 +5,13 @@ import java.io.IOException;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 public class ProjectedGraphOutputFormat extends
-		TextVertexOutputFormat<LongWritable, NullWritable, LongWritable> {
+		TextVertexOutputFormat<VLongWritable, NullWritable, VLongWritable> {
 
 	private static final String SEP = "\t";
 	private static final String SEP_TRIPLE = "\n";
@@ -25,12 +25,12 @@ public class ProjectedGraphOutputFormat extends
 	class ProjectedGraphVertexWriter extends TextVertexWriterToEachLine {
 		@Override
 		protected Text convertVertexToLine(
-				Vertex<LongWritable, NullWritable, LongWritable, ?> vertex)
+				Vertex<VLongWritable, NullWritable, VLongWritable, ?> vertex)
 				throws IOException {
 			Text out = new Text();
 			String self = vertex.getId().toString();
 			StringBuilder sb = new StringBuilder();
-			for (Edge<LongWritable, LongWritable> edge : vertex.getEdges()) {
+			for (Edge<VLongWritable, VLongWritable> edge : vertex.getEdges()) {
 				sb.append(self).append(SEP);
 				sb.append(edge.getTargetVertexId().toString()).append(SEP);
 				sb.append(edge.getValue().toString()).append(SEP_TRIPLE);
