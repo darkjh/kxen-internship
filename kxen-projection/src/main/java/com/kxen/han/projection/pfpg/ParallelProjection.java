@@ -90,7 +90,7 @@ extends Configured implements Tool {
 	
 	public static final int REDUCE_SLOT = 32;
 	public static final int MACHINE = 4;
-	public static final int MEM = 16 * 1024 - 512;	// 512m for system use
+	public static final int MEM = 10 * 1024;
 	
 	private ParallelProjection() {}
 	
@@ -103,11 +103,11 @@ extends Configured implements Tool {
 	public static void runProjection(Configuration conf) 
 					throws IOException, InterruptedException, ClassNotFoundException {
 		// set-up common conf. for all jobs
-		String input = conf.get(ParallelProjectionDriver.IN);
-		String output = conf.get(ParallelProjectionDriver.OUT);
-		String tmp = conf.get(ParallelProjectionDriver.TMP);
+		String input = conf.get(ParallelProjection.IN);
+		String output = conf.get(ParallelProjection.OUT);
+		String tmp = conf.get(ParallelProjection.TMP);
 		int minSupport = conf.getInt(MIN_SUPPORT, 2);
-		int startFrom = conf.getInt(ParallelProjectionDriver.START, 1);
+		int startFrom = conf.getInt(ParallelProjection.START, 1);
 
 		conf.set("mapred.output.compression.codec","org.apache.hadoop.io.compress.SnappyCodec");
 	    conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");
@@ -365,7 +365,7 @@ extends Configured implements Tool {
 	    job.setMapperClass(ParallelProjectionMapper.class);
 	    // job.setCombinerClass(ParallelProjectionCombiner.class);
 	    
-	    if (conf.getBoolean(ParallelProjectionDriver.FPG, false)) 
+	    if (conf.getBoolean(ParallelProjection.FPG, false)) 
 	    	job.setReducerClass(ParallelProjectionReducer.class);	// FPG
 	    else 
 	    	job.setReducerClass(ParallelProjectionReducer2.class);	// FPG2
