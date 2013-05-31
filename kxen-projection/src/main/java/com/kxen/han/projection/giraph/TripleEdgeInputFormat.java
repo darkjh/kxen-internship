@@ -42,7 +42,8 @@ extends TextEdgeInputFormat<VLongWritable, VLongWritable> {
 		@Override
 		protected VLongWritable getSourceVertexId(Long[] pair)
 				throws IOException {
-			return new VLongWritable(pair[0]);
+			// negative vertex id for user node
+			return new VLongWritable(-pair[0]);
 		}
 
 		@Override
