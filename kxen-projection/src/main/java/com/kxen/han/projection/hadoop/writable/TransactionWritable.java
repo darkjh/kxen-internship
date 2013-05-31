@@ -12,7 +12,7 @@ import org.apache.hadoop.io.Writable;
 import com.google.common.base.Joiner;
 
 /**
- * Serializable class for a transaction list of items
+ * Serializable class for a transaction list of items backed by an array
  * Use VLongWritable, reduce serialized file size
  * 
  * @author Han JU
@@ -25,12 +25,18 @@ public class TransactionWritable implements Writable, Iterable<Long> {
 	int size;
 	long[] transacList;
 	
+	/** static factory for Giraph */
+	public static TransactionWritable newInstance() {
+		return new TransactionWritable();
+	}
+	
+	/** no arg ctor for hadoop serialization */
 	public TransactionWritable() {
 		size = 0;
 	}
 	
 	public TransactionWritable(List<Long> transac) {
-		size = transac.size();
+		this.size = transac.size();
 		transacList = new long[size];
 		for (int i = 0; i < size; i++) {
 			transacList[i] = transac.get(i);
@@ -44,6 +50,12 @@ public class TransactionWritable implements Writable, Iterable<Long> {
 		for (Long l : transac) {
 			transacList[i++] = l;
 		}
+	}
+
+	public TransactionWritable(long[] transac, int offset, int length) {
+		this.size = length;
+		transacList = new long[size];
+		System.arraycopy(transac, offset, transacList, 0, length);
 	}
 	
 	public int size() {
