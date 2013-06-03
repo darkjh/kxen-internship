@@ -1,18 +1,12 @@
 package com.kxen.han.projection.giraph;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.Arrays;
-import java.util.Map;
 
-import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.filecache.DistributedCache;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.VLongWritable;
 
 import com.carrotsearch.hppc.LongLongOpenHashMap;
@@ -27,7 +21,6 @@ extends BasicComputation
 	public static String MIN_SUPPORT = GiraphProjection.SUPP;
 	public static String ROUND = GiraphProjection.GROUP;
 	
-	private static Map<Long,Long> FREQ;
 	private static int TOTAL_ROUND;
 	private static int MIN_SUPP;
 	
@@ -35,29 +28,9 @@ extends BasicComputation
 	public static boolean isProdNode(Vertex<VLongWritable,?,?> v) {
 		return v.getId().get() > 0;
 	}
-
-	@SuppressWarnings("unchecked")
-	private void initFreq() throws IOException {
-		GiraphConfiguration conf = getConf();
-		if (null == FREQ) {
-			System.out.println("Init freq list ...");
-			Path[] caches = DistributedCache.getLocalCacheFiles(conf);
-			FileSystem fs = FileSystem.getLocal(conf); // cache is stored locally
-			Path fListPath = fs.makeQualified(caches[0]);
-			ObjectInputStream ois = new ObjectInputStream(fs.open(fListPath));
-			try {
-				FREQ = (Map<Long, Long>) ois.readObject();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			} finally {
-				ois.close();
-			}
-		}
-	}
 	
 	/** init the support filter map and some static variable */
 	private void init() throws IOException {
-		initFreq();
 		MIN_SUPP = getConf().getInt(MIN_SUPPORT, 2);
 		TOTAL_ROUND = getConf().getInt(ROUND, 20);
 	}
@@ -67,7 +40,6 @@ extends BasicComputation
 			Vertex<VLongWritable,GiraphProjectionVertexValue,VLongWritable> vertex,
 			Iterable<TransactionWritable> messages)
 			throws IOException {
-		// init f-list for filtering
 		if (getSuperstep() == 0)
 			init();
 		
@@ -97,9 +69,6 @@ extends BasicComputation
 				target.set(neighbors[i]);
 				if ((target.get() % TOTAL_ROUND) != getSuperstep())
 					continue;
-				if (!FREQ.containsKey(target.get()))
-					continue;
-				
 				sendMessage(target, 
 						new TransactionWritable(neighbors, i+1, len-i-1));
 			}
