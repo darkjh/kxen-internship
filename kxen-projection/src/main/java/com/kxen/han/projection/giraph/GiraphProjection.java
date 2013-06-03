@@ -150,17 +150,11 @@ extends Configured implements Tool {
 					Integer.parseInt(cmd.getOptionValue(SUPP)), giraphConf);
 		}
 		
-	    // for write heavy jobs, no socket timeout
-	    // bug in hadoop 1.0.2, need to set a large number, 0 not working
-	    giraphConf.set("dfs.socket.timeout", "99999999");
-	    giraphConf.set("dfs.datanode.socket.write.timeout", "99999999");
-		
 		int worker = Integer.parseInt(cmd.getOptionValue(WORKER));
 		giraphConf.setWorkerConfiguration(worker, worker, 100.0f);
 		giraphConf.set(ProjectionComputation.MIN_SUPPORT, cmd.getOptionValue(SUPP));
 		giraphConf.setDoOutputDuringComputation(true);
-		
-		// giraphConf.setNumComputeThreads(4);
+		giraphConf.setEdgeInputFilterClass(EdgeBySupportFilter.class);
 		
 		GiraphJob job = new GiraphJob(giraphConf, "GiraphProjection: Projection");
 		GiraphFileInputFormat.addEdgeInputPath(giraphConf, new Path(cmd.getOptionValue(IN)));
