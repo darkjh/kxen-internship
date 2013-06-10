@@ -10,6 +10,18 @@ import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+/**
+ * InputFormat implementation for Giraph based projection
+ * It reads an edge format input
+ *   user id <TAB> item id <TAB> others ...
+ * 
+ * For each line, it construct an edge from user to item
+ * User vertex id during the program is NEGATIVE, thus avoid vertex id 
+ * conflicts between user vertices and item vertices
+ * 
+ * @author Han JU
+ *
+ */
 public class TripleEdgeInputFormat
 extends TextEdgeInputFormat<VLongWritable, VLongWritable> {
 	

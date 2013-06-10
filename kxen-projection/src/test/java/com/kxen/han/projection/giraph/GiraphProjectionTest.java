@@ -36,8 +36,8 @@ public class GiraphProjectionTest extends BspCase {
 
 	@Test
 	public void testNormalCase() throws Exception {
-		// String[] edges = parseInput(new File("src/test/resources/TestExampleAutoGen"));
-		String[] edges = parseInput(new File("src/main/resources/test_triples"));
+		String[] edges = parseInput(new File("src/test/resources/TestExampleAutoGen"));
+		// String[] edges = parseInput(new File("src/main/resources/test_triples"));
 		BufferedWriter bw = new BufferedWriter(
 				new FileWriter("/home/port/output/giraph_proj_test"));
 
@@ -45,18 +45,17 @@ public class GiraphProjectionTest extends BspCase {
 		conf.setInt(ProjectionComputation.MIN_SUPPORT, 2);
 		conf.setBoolean("giraph.doOutputDuringComputation", true);
 		
-		conf.setNumComputeThreads(4);
-		
 		conf.setComputationClass(ProjectionComputation.class);
 		conf.setOutEdgesClass(ByteArrayEdges.class);
 		conf.setEdgeInputFormatClass(TripleEdgeInputFormat.class);
-		conf.setVertexOutputFormatClass(ProjectedGraphOutputFormat.class);
+		// conf.setVertexOutputFormatClass(ProjectedGraphOutputFormat.class);
+		conf.setVertexOutputFormatClass(ProjectedGraphVertexOutputFormat.class);
 		Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
 		
 		for (String s : results) {
 			if (!s.isEmpty()) {
-				// System.out.println(s);
-				bw.write(s+"\n");
+				System.out.println(s);
+//				bw.write(s+"\n");
 			}
 		}
 		bw.close();

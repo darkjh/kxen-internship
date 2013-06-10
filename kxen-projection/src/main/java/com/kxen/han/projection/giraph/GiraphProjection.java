@@ -31,6 +31,12 @@ import org.apache.hadoop.util.ToolRunner;
 import com.google.common.collect.Maps;
 import com.kxen.han.projection.pfpg.ParallelProjection;
 
+/**
+ * A driver class to run the Giraph based projection
+ * 
+ * @author Han JU
+ *
+ */
 public class GiraphProjection 
 extends Configured implements Tool {
 	
@@ -58,8 +64,11 @@ extends Configured implements Tool {
 		OPTIONS.addOption(WORKER, "worker", true, "Number of Wokers To Use");
 		OPTIONS.addOption(GROUP, "numGroup", true, "Number of groups");
 		OPTIONS.addOption(START, true, "Start Directly From a Step");
-	}
+    }
 	
+	/**
+	 * Start step 1, counting of individual support 
+	 */
 	public static void startParallelCounting(GiraphConfiguration conf) 
 			throws IOException, InterruptedException, ClassNotFoundException {
 	    conf.set("mapred.compress.map.output", "true");
@@ -132,7 +141,7 @@ extends Configured implements Tool {
 		GiraphConfiguration giraphConf = new GiraphConfiguration(getConf());
 		giraphConf.setComputationClass(ProjectionComputation.class);
 		giraphConf.setEdgeInputFormatClass(TripleEdgeInputFormat.class);
-		giraphConf.setVertexOutputFormatClass(ProjectedGraphOutputFormat.class);
+		giraphConf.setVertexOutputFormatClass(ProjectedGraphVertexOutputFormat.class);
 		
 		giraphConf.set(IN, cmd.getOptionValue(IN));
 		giraphConf.set(OUT, cmd.getOptionValue(OUT));
@@ -155,11 +164,13 @@ extends Configured implements Tool {
 		giraphConf.set(ProjectionComputation.MIN_SUPPORT, cmd.getOptionValue(SUPP));
 		giraphConf.setDoOutputDuringComputation(true);
 		giraphConf.setEdgeInputFilterClass(EdgeBySupportFilter.class);
-		
-		GiraphJob job = new GiraphJob(giraphConf, "GiraphProjection: Projection");
+
+		GiraphJob job = new GiraphJob(giraphConf, "GiraphProjection: Projection "
+                +"with "+cmd.getOptionValue(GROUP)+" groups");
+
 		GiraphFileInputFormat.addEdgeInputPath(giraphConf, new Path(cmd.getOptionValue(IN)));
 		FileOutputFormat.setOutputPath(job.getInternalJob(), new Path(cmd.getOptionValue(OUT)));
-		
+
 		return job.run(true) ? 0 : -1;
 	}
 	

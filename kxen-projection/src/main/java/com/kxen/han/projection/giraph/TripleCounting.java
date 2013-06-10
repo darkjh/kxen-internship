@@ -8,6 +8,15 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 
+/**
+ * Counting of individual supports
+ * Suppose that the input is an edge format
+ * 
+ *   user id <TAB> item id <TAB> (some value)
+ * 
+ * @author Han JU
+ *
+ */
 public class TripleCounting {
 	
 	private static final Pattern SEP = Pattern.compile("\t");
