@@ -35,13 +35,28 @@ extends TextEdgeInputFormat<VLongWritable, VLongWritable> {
 	
 	class TripleEdgeReader
 	extends TextEdgeReaderFromEachLineProcessed<Long[]> {
+		
+		private boolean userSpace; 
+		
+		@Override
+	    public void initialize(InputSplit inputSplit, TaskAttemptContext context) 
+	    		throws IOException, InterruptedException {
+			super.initialize(inputSplit, context);
+			userSpace = context.getConfiguration().
+					getBoolean(GiraphProjection.USER_SPACE, false);
+		}
 
 		@Override
 		protected Long[] preprocessLine(Text line) throws IOException {
 			Long[] pair = new Long[2];
 			String[] l = SEP.split(line.toString());
-			pair[0] = Long.parseLong(l[0]);		// user
-			pair[1] = Long.parseLong(l[1]);		// product
+			if (userSpace) {						// exchange user/prod column
+				pair[0] = Long.parseLong(l[1]);		// product
+				pair[1] = Long.parseLong(l[0]);		// user
+			} else {
+				pair[0] = Long.parseLong(l[0]);		// user
+				pair[1] = Long.parseLong(l[1]);		// product
+			}
 			return pair;
 		}
 

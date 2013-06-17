@@ -48,6 +48,7 @@ extends Configured implements Tool {
 	static public final String WORKER = "w";
 	static public final String GROUP = "g";
 	static public final String START = "startFrom";
+	static public final String USER_SPACE = "userSpace";
 	
 	public static final String TRIPLE_COUNTING = "triple-counting";
 	public static final String F_LIST = "giraph-f-list"; 
@@ -64,6 +65,8 @@ extends Configured implements Tool {
 		OPTIONS.addOption(WORKER, "worker", true, "Number of Wokers To Use");
 		OPTIONS.addOption(GROUP, "numGroup", true, "Number of groups");
 		OPTIONS.addOption(START, true, "Start Directly From a Step");
+		OPTIONS.addOption(USER_SPACE, false, 
+				"Project to user space");
     }
 	
 	/**
@@ -148,6 +151,10 @@ extends Configured implements Tool {
 		giraphConf.set(TMP, cmd.getOptionValue(TMP));
 		giraphConf.set(SUPP, cmd.getOptionValue(SUPP));
 		giraphConf.set(GROUP, cmd.getOptionValue(GROUP));
+		if (cmd.hasOption(USER_SPACE)) 
+			giraphConf.set(USER_SPACE, "true");
+		else
+			giraphConf.set(USER_SPACE, "false");
 		
 		int start = Integer.parseInt(cmd.getOptionValue(START, "1"));
 		
@@ -164,6 +171,7 @@ extends Configured implements Tool {
 		giraphConf.set(ProjectionComputation.MIN_SUPPORT, cmd.getOptionValue(SUPP));
 		giraphConf.setDoOutputDuringComputation(true);
 		giraphConf.setEdgeInputFilterClass(EdgeBySupportFilter.class);
+		// giraphConf.setNumComputeThreads(2);
 
 		GiraphJob job = new GiraphJob(giraphConf, "GiraphProjection: Projection "
                 +"with "+cmd.getOptionValue(GROUP)+" groups");
