@@ -6,6 +6,7 @@ import java.util.Arrays;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.VLongWritable;
 
 import com.carrotsearch.hppc.LongArrayList;
@@ -63,6 +64,11 @@ extends BasicComputation
 		// init user node's data: rounds and neighbor list
 		if (getSuperstep() == 0 && !isProdNode(vertex)) {
 			int len = vertex.getNumEdges();
+			if (len > 2000) {
+				vertex.voteToHalt();
+				System.out.println("neighbor: "+len);
+				return;
+			}
 			long[] neighbors = new long[len];
 			int i = 0;
 			for (Edge<VLongWritable,VLongWritable> edge : vertex.getEdges()) {
@@ -78,7 +84,6 @@ extends BasicComputation
 		if (!isProdNode(vertex)) {
 			int len = vertex.getNumEdges();
 			long[] neighbors = vertex.getValue().neighbors;
-			
 			// send messages
 			// stop at (length-1), avoid sending empty message
 			VLongWritable target = new VLongWritable();
@@ -88,8 +93,13 @@ extends BasicComputation
 					continue;
 				sendMessage(target, 
 						new TransactionWritable(neighbors, i+1, len-i-1));
+				// aggregate msg length value to master
+				aggregate(ProjectionMasterCompute.MSG_LEN_COUNT,
+						new LongWritable(len-i-1));
+				if (len-i-1 > 2000)
+					System.out.println(vertex.getId());
 			}
-
+			
 			int remaining = vertex.getValue().round - 1;
 			if (remaining == 0) {
 				removeVertexRequest(vertex.getId());
