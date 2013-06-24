@@ -64,11 +64,6 @@ extends BasicComputation
 		// init user node's data: rounds and neighbor list
 		if (getSuperstep() == 0 && !isProdNode(vertex)) {
 			int len = vertex.getNumEdges();
-			if (len > 2000) {
-				vertex.voteToHalt();
-				System.out.println("neighbor: "+len);
-				return;
-			}
 			long[] neighbors = new long[len];
 			int i = 0;
 			for (Edge<VLongWritable,VLongWritable> edge : vertex.getEdges()) {
@@ -76,7 +71,6 @@ extends BasicComputation
 				i++;
 			}
 			Arrays.sort(neighbors);
-			vertex.getValue().round = TOTAL_ROUND;
 			vertex.getValue().neighbors = neighbors;
 		}
 		
@@ -96,19 +90,6 @@ extends BasicComputation
 				// aggregate msg length value to master
 				aggregate(ProjectionMasterCompute.MSG_LEN_COUNT,
 						new LongWritable(len-i-1));
-				if (len-i-1 > 2000)
-					System.out.println(vertex.getId());
-			}
-			
-			int remaining = vertex.getValue().round - 1;
-			if (remaining == 0) {
-				removeVertexRequest(vertex.getId());
-			} else if (remaining == -1) {
-				// stop user node one superstep later
-				// because removeVertexRequest needs one step to execute
-				vertex.voteToHalt();
-			} else {
-				vertex.getValue().round = remaining;
 			}
 		}
 
@@ -122,16 +103,11 @@ extends BasicComputation
 					counter.put(item, count+1l);
 				}
 			}
-//			VLongWritable k = new VLongWritable();
-//			VLongWritable v = new VLongWritable();
 			LongArrayList neighbors = new LongArrayList();
 			LongArrayList values = new LongArrayList();
 			
 			for (LongLongCursor cursor : counter) {
 				if (cursor.value >= MIN_SUPP) {
-//					k.set(cursor.key);
-//					v.set(cursor.value);
-//					vertex.addEdge(EdgeFactory.create(k, v));
 					neighbors.add(cursor.key);
 					values.add(cursor.value);
 				}
