@@ -27,6 +27,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 import com.kxen.han.projection.pfpg.ParallelProjection;
@@ -39,6 +41,8 @@ import com.kxen.han.projection.pfpg.ParallelProjection;
  */
 public class GiraphProjection 
 extends Configured implements Tool {
+	
+	private static final Logger log = LoggerFactory.getLogger(GiraphProjection.class);
 	
 	/** cli interface set-up */
 	static public final String IN = "i";
@@ -126,6 +130,8 @@ extends Configured implements Tool {
 			reader.close();
 		}
 		
+		graphStats(freq);
+				
 		// save to HDFS
 		Path fListPath = new Path(tmp, F_LIST); 
 		OutputStream out = fs.create(fListPath);
@@ -135,6 +141,18 @@ extends Configured implements Tool {
 		DistributedCache.addCacheFile(fListPath.toUri(), conf);		// add to dCache
 	}
 	
+	private static void graphStats(Map<Long, Long> freq) {
+		long sum = 0l;
+		long max = Long.MIN_VALUE;
+		for (Long l : freq.values()) {
+			sum += l;
+			if (l > max)
+				max = l;
+		}
+		System.out.println("Frequent Items: " + freq.size());
+		System.out.println("Average Neighbors: " + sum / freq.size());
+		System.out.println("Max Neighbor: " + max);
+	}
 	
 	@Override
 	public int run(String[] args) throws Exception {
@@ -151,10 +169,11 @@ extends Configured implements Tool {
 		giraphConf.set(TMP, cmd.getOptionValue(TMP));
 		giraphConf.set(SUPP, cmd.getOptionValue(SUPP));
 		giraphConf.set(GROUP, cmd.getOptionValue(GROUP));
-		if (cmd.hasOption(USER_SPACE)) 
+		if (cmd.hasOption(USER_SPACE)) { 
 			giraphConf.set(USER_SPACE, "true");
-		else
+		} else {
 			giraphConf.set(USER_SPACE, "false");
+		}
 		
 		int start = Integer.parseInt(cmd.getOptionValue(START, "1"));
 		
@@ -171,6 +190,8 @@ extends Configured implements Tool {
 		giraphConf.set(ProjectionComputation.MIN_SUPPORT, cmd.getOptionValue(SUPP));
 		giraphConf.setDoOutputDuringComputation(true);
 		giraphConf.setEdgeInputFilterClass(EdgeBySupportFilter.class);
+		giraphConf.setMasterComputeClass(ProjectionMasterCompute.class);
+		
 		// giraphConf.setNumComputeThreads(2);
 
 		GiraphJob job = new GiraphJob(giraphConf, "GiraphProjection: Projection "
