@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -21,7 +22,7 @@ import com.kxen.han.projection.hadoop.writable.GiraphProjectionVertexValue;
  */
 public class ProjectedGraphVertexOutputFormat 
 extends TextVertexOutputFormat
-<VLongWritable, GiraphProjectionVertexValue, VLongWritable> {
+<VLongWritable, GiraphProjectionVertexValue, NullWritable> {
 	
 	private static final String SEP = "\t";
 	private static final String SEP_TRIPLE = "\n";
@@ -35,7 +36,7 @@ extends TextVertexOutputFormat
 	class ProjectedGraphVertexWriter extends TextVertexWriterToEachLine {
 		@Override
 		protected Text convertVertexToLine(
-				Vertex<VLongWritable, GiraphProjectionVertexValue, VLongWritable> vertex)
+				Vertex<VLongWritable, GiraphProjectionVertexValue, NullWritable> vertex)
 				throws IOException {
 			if (!ProjectionComputation.isProdNode(vertex))
 				return null;

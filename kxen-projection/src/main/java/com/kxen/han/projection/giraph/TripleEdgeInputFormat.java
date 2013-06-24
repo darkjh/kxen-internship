@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.io.formats.TextEdgeInputFormat;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -23,12 +24,12 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  *
  */
 public class TripleEdgeInputFormat
-extends TextEdgeInputFormat<VLongWritable, VLongWritable> {
+extends TextEdgeInputFormat<VLongWritable, NullWritable> {
 	
 	private static final Pattern SEP = Pattern.compile("\t");
 	
 	@Override
-	public EdgeReader<VLongWritable, VLongWritable> createEdgeReader(
+	public EdgeReader<VLongWritable, NullWritable> createEdgeReader(
 			InputSplit split, TaskAttemptContext context) throws IOException {
 		return new TripleEdgeReader();
 	}
@@ -74,8 +75,8 @@ extends TextEdgeInputFormat<VLongWritable, VLongWritable> {
 		}
 
 		@Override
-		protected VLongWritable getValue(Long[] line) throws IOException {
-			return new VLongWritable(-1);		// nothing for the link
+		protected NullWritable getValue(Long[] line) throws IOException {
+			return NullWritable.get();		// nothing for the link
 		}
 	}
 }

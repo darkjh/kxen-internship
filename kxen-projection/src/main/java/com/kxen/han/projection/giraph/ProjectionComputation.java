@@ -7,6 +7,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.VLongWritable;
 
 import com.carrotsearch.hppc.LongArrayList;
@@ -34,7 +35,7 @@ import com.kxen.han.projection.hadoop.writable.TransactionWritable;
  */
 public class ProjectionComputation 
 extends BasicComputation
-<VLongWritable,GiraphProjectionVertexValue,VLongWritable,TransactionWritable> {
+<VLongWritable,GiraphProjectionVertexValue,NullWritable,TransactionWritable> {
 	
 	public static String MIN_SUPPORT = GiraphProjection.SUPP;
 	public static String ROUND = GiraphProjection.GROUP;
@@ -55,7 +56,7 @@ extends BasicComputation
 	
 	@Override
 	public void compute(
-			Vertex<VLongWritable,GiraphProjectionVertexValue,VLongWritable> vertex,
+			Vertex<VLongWritable,GiraphProjectionVertexValue,NullWritable> vertex,
 			Iterable<TransactionWritable> messages)
 			throws IOException {
 		if (getSuperstep() == 0)
@@ -66,7 +67,7 @@ extends BasicComputation
 			int len = vertex.getNumEdges();
 			long[] neighbors = new long[len];
 			int i = 0;
-			for (Edge<VLongWritable,VLongWritable> edge : vertex.getEdges()) {
+			for (Edge<VLongWritable,NullWritable> edge : vertex.getEdges()) {
 				neighbors[i] = edge.getTargetVertexId().get();
 				i++;
 			}
