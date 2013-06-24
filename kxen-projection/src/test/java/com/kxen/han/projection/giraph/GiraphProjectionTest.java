@@ -33,31 +33,49 @@ public class GiraphProjectionTest extends BspCase {
 		}
 		return res;
 	}
-
-	@Test
-	public void testNormalCase() throws Exception {
-		String[] edges = parseInput(new File("src/test/resources/TestExampleAutoGen"));
-		// String[] edges = parseInput(new File("src/main/resources/test_triples"));
+	
+	public void projectionTest(
+			String[] edges, 
+			String outputFileName,
+			int support) throws Exception {
+		String outDir = "/home/port/output/giraph-unit-test/";
+		File dir = new File(outDir);
+		dir.mkdirs();
+		File output = new File(dir, outputFileName);
 		BufferedWriter bw = new BufferedWriter(
-				new FileWriter("/home/port/output/giraph_proj_test"));
+				new FileWriter(output));
 
 		GiraphConfiguration conf = new GiraphConfiguration();
-		conf.setInt(ProjectionComputation.MIN_SUPPORT, 2);
+		conf.setInt(ProjectionComputation.MIN_SUPPORT, support);
 		conf.setBoolean("giraph.doOutputDuringComputation", true);
 		
 		conf.setComputationClass(ProjectionComputation.class);
+		conf.setMasterComputeClass(ProjectionMasterCompute.class);
 		conf.setOutEdgesClass(ByteArrayEdges.class);
 		conf.setEdgeInputFormatClass(TripleEdgeInputFormat.class);
-		// conf.setVertexOutputFormatClass(ProjectedGraphOutputFormat.class);
 		conf.setVertexOutputFormatClass(ProjectedGraphVertexOutputFormat.class);
+		conf.setBoolean(GiraphProjection.USER_SPACE, false);
 		Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
 		
 		for (String s : results) {
 			if (!s.isEmpty()) {
-				System.out.println(s);
-//				bw.write(s+"\n");
+//				System.out.println(s);
+				bw.write(s+"\n");
 			}
 		}
 		bw.close();
+		
+	}
+
+	@Test
+	public void testPaperCase() throws Exception {
+		String[] edges = parseInput(new File("src/test/resources/TestExampleAutoGen"));
+		projectionTest(edges, "paper-case-result", 3);
+	}
+	
+	@Test
+	public void testMSDTestCase() throws Exception {
+		String[] edges = parseInput(new File("src/main/resources/test_triples"));
+		projectionTest(edges, "msd-test-result", 2);
 	}
 }
