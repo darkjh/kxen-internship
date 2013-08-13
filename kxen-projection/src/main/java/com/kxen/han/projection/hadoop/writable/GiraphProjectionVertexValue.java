@@ -44,6 +44,12 @@ implements Writable {
 		System.arraycopy(neighbors, 0, this.neighbors, 0, this.size);
 		System.arraycopy(values, 0, this.values, 0, this.size);
 	}
+
+    /** safely set the neighbors array */
+    public void setNeighbors(long[] neighbors) {
+        this.neighbors = neighbors;
+        this.size = neighbors.length;
+    }
 	
 	@Override
 	public void readFields(DataInput in) throws IOException {
