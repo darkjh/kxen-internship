@@ -42,6 +42,7 @@ extends BasicComputation
 	
 	private static int TOTAL_ROUND;
 	private static int MIN_SUPP;
+	private static int FIRST_SUPERSTEP = 0;
 	
 	/** by construction, a user node's id is negative */
 	public static boolean isProdNode(Vertex<VLongWritable,?,?> v) {
@@ -59,11 +60,11 @@ extends BasicComputation
 			Vertex<VLongWritable,GiraphProjectionVertexValue,NullWritable> vertex,
 			Iterable<TransactionWritable> messages)
 			throws IOException {
-		if (getSuperstep() == 0)
+		if (getSuperstep() == FIRST_SUPERSTEP)
 			init();
 		
 		// init user node's data: rounds and neighbor list
-		if (getSuperstep() == 0 && !isProdNode(vertex)) {
+		if (getSuperstep() == FIRST_SUPERSTEP && !isProdNode(vertex)) {
 			int len = vertex.getNumEdges();
 			long[] neighbors = new long[len];
 			int i = 0;
@@ -72,19 +73,20 @@ extends BasicComputation
 				i++;
 			}
 			Arrays.sort(neighbors);
-			vertex.getValue().neighbors = neighbors;
+			vertex.getValue().setNeighbors(neighbors);
 		}
 		
 		// if a user node, dispatch its neighbor list
-		if (!isProdNode(vertex)) {
+		if (getSuperstep() >= FIRST_SUPERSTEP && !isProdNode(vertex)) {
 			int len = vertex.getNumEdges();
 			long[] neighbors = vertex.getValue().neighbors;
-			// send messages
+            // send messages
 			// stop at (length-1), avoid sending empty message
 			VLongWritable target = new VLongWritable();
 			for (int i = 0; i < len-1; i++) {
-				target.set(neighbors[i]);
-				if ((target.get() % TOTAL_ROUND) != getSuperstep())
+                target.set(neighbors[i]);
+                if ((target.get() % TOTAL_ROUND)
+						!= (getSuperstep()-FIRST_SUPERSTEP))
 					continue;
 				sendMessage(target, 
 						new TransactionWritable(neighbors, i+1, len-i-1));

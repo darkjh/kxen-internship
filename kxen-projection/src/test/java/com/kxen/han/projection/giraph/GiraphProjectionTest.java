@@ -55,6 +55,11 @@ public class GiraphProjectionTest extends BspCase {
 		conf.setEdgeInputFormatClass(TripleEdgeInputFormat.class);
 		conf.setVertexOutputFormatClass(ProjectedGraphVertexOutputFormat.class);
 		conf.setBoolean(GiraphProjection.USER_SPACE, false);
+
+        conf.setWorkerConfiguration(2, 2, 1.0f);
+        conf.set("giraph.useOutOfCoreGraph", "true");
+        conf.set("giraph.maxPartitionsInMemory", "1");
+
 		Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
 		
 		for (String s : results) {
@@ -67,7 +72,7 @@ public class GiraphProjectionTest extends BspCase {
 		
 	}
 
-	@Test
+	//@Test
 	public void testPaperCase() throws Exception {
 		String[] edges = parseInput(new File("src/test/resources/TestExampleAutoGen"));
 		projectionTest(edges, "paper-case-result", 3);
